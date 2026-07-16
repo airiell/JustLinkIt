@@ -93,3 +93,19 @@ Windows用常駐アプリのプロジェクト初期化を行います。
 - [x] フロントエンド（編集UI）：当初はビューアーモーダル内にタグUIを実装したが、実装方針を合意しないまま進めてしまったとの指摘を受け、ユーザーとUIを再検討。最終的にグリッドのカード面に🔗コピーボタンと並べて🏷️タグボタンを追加し、クリックでカード直下にポップオーバー（タグチップ一覧＋削除ボタン＋追加フォーム）を表示する方式に変更（右クリックメニュー案は不採用）。タグ自体の常時表示はカード下部の日付キャプション部分にまとめて表示。ポップオーバーは外側クリックまたはEscapeで閉じる。
 - [x] フロントエンド（ビューアー側の表示）：ここでも一度「モーダル側は完全に削除」で実装してしまい、再度指摘を受けて手戻り。ビューアーにも読み取り専用のタグ表示を残す方針で合意（編集はカードのポップオーバーのみ、モーダルでは編集UIを持たない＝二重実装を避ける）。表示位置は当初「画像の左上に少しはみ出す形」で`getBoundingClientRect()`ベースの実測位置合わせを実装したが、見た目が不自然との指摘を受けてさらに変更。最終的には日付（`viewer-date`）の下に通常のドキュメントフロー内で横並び表示する、JSでの位置計算を要さないシンプルな形に落ち着いた（`getBoundingClientRect()`ベースの実装・`resize`リスナーは撤去）。
 - [x] `Server/tests/{DatabaseTest,GalleryTest}.php`にテストを追加（スキーマ、CASCADE削除、追加・重複防止・空文字無視・削除・存在しないhash）。Playwrightで（本物のconfig/DBは触らずテスト用に一時差し替えて）ポップオーバーの開閉・タグ追加/削除・カードキャプションへの反映・ビューアー側の読み取り専用タグ表示（日付直下・横並び）・背景クリックでの各種クローズ動作を確認済み（PHPテストは計34/34成功）。
+
+## Phase 10: セキュリティ強化（ディレクトリトラバーサル対策）
+セキュリティ監査に基づき、サーバーサイド（PHP）におけるディレクトリトラバーサルを未然に防ぐための多層防御（Defense in Depth）を実装します。
+- [x] `Server/src/Config.php`: `uploadDirPath()` について、`upload_dir`（既定値`"u"`）に`../`や絶対パス指定が含まれる場合は`\RuntimeException`で拒否し、加えてディレクトリが既に存在する場合はシンボリックリンク経由の脱出も`realpath()`で検知する多層防御を追加した。**協議の上、`databasePath()`および`upload_dir_path`/`database_path`による明示的な絶対パス上書きは検証対象外とした**：これらは`ConfigTest.php`が最初から検証している「テスト等での隔離ディレクトリ指定に使う意図した機能」であり（例:`/tmp/custom-dir`）、ベースディレクトリ内への強制はこの設計と衝突するため。`databasePath()`の既定値も`upload_dir`のようなconfig由来の可変フラグメントから組み立てられておらず固定リテラルのため、そもそも検証対象となるトラバーサル経路が存在しない。
+- [x] `Server/src/Uploader.php`: `persist()`のファイルパス構築部分に`basename($hash)`/`basename($extension)`を適用（多層防御。`$hash`/`$extension`は現状常にクラス内部でSHA-256計算・固定MIMEホワイトリストから決定されるため実害があるパスではないが、パス構築コード自体が入力元を信頼しない形にした）。
+- [x] `Server/src/Gallery.php`: `delete()`のファイルパス構築部分に`basename($hash)`/`basename($row['extension'])`を適用（`$hash`はAPI層`gallery.php`で`^[a-f0-9]{64}$`の正規表現検証済みだが、同様に多層防御として追加）。
+- [x] テストコードの拡充: `ConfigTest.php`に`upload_dir`へのトラバーサル文字列/絶対パス拒否と、`upload_dir_path`明示指定時は迂回されないことのテストを追加。`GalleryTest.php`にはDB内へ直接トラバーサル文字列入りhashを混入させ（API層の検証をバイパスした想定）、`delete()`が意図したディレクトリ外のファイルに触れないことを確認するテストを追加。`Uploader.php`側は`$hash`が常に内部計算値で外部から注入不可能なため、公開APIの契約を通した意味あるテストは書けず、コードレビューで確認可能な防御コードとして留めた。全39テスト成功（`php Server/tests/run.php`で確認）。
+
+## Phase 11: 総合的なセキュリティ対策の強化（SQLi, XSS, アップロード, CSRF）
+ディレクトリトラバーサルに加え、Webアプリケーションの主要な脆弱性に対する防御機構を点検・強化します。
+- [x] **SQLインジェクション対策**: `Server/src/` 配下の全クエリを確認し、`Database.php` の固定DDL文字列（`CREATE TABLE`等、変数を含まない）を除き、全てPDOプリペアドステートメント＋バインドパラメータで実装済みであることを確認した。コード変更は不要。
+- [x] **悪意のあるスクリプトの実行防止**: `Server/public/u/.htaccess` を追加し、当該ディレクトリでの`.php`等スクリプト実行をWebサーバーレベルで無効化（`mod_php`のengine off、`FilesMatch`での`Require all denied`、PHP-FPM等のハンドラ解除を併用した多層防御）。
+- [x] **XSS対策**: `Server/public/.htaccess` に `Header always set` で `X-Content-Type-Options: nosniff`・`X-Frame-Options: DENY`・`Referrer-Policy`・`Content-Security-Policy`（`default-src 'self'`、外部CDN/インラインscript・styleを使わない構成のため厳格な設定で問題なし）を追加。DocumentRoot直下の一括設定のため全レスポンス（HTML/JSON/静的ファイル）に適用される。
+- [x] **CSRF対策**: `Server/public/api/gallery.php` の POST/DELETE（状態変更あり）に対し、`X-Requested-With: XMLHttpRequest` ヘッダーが無ければ403で拒否する仕組みをセッション認証チェックの直後に追加。GET（一覧取得、状態変更なし）は対象外。`Server/public/gallery/app.js` 側の該当3箇所（タグ追加・タグ削除・ファイル削除）のfetch呼び出しにこのヘッダーを追加。
+- 検証: `php Server/tests/run.php`（39/39成功、既存テストへの影響なし）に加え、`.htaccess`はPHP内蔵サーバーでは評価されないため、XAMPP同梱のApache 2.4を実データに触れない隔離コピー環境で一時起動し実HTTPリクエストで確認（Phase3の`.htaccess`検証時と同じ手法）：`u/`内に置いた`.php`ファイルへの直接アクセスが403になること、通常の画像ファイルは従来通り静的配信されること、認証済みセッションでもCSRFヘッダー無しのPOST/DELETEが403になること、ヘッダー付与時は正常にAPI処理まで到達すること、GET（一覧）はヘッダー無しでも（未認証なら401だが）CSRFでは弾かれないこと、全レスポンスに上記セキュリティヘッダーが付与されることを確認済み。
+

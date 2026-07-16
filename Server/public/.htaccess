@@ -1,6 +1,16 @@
 # JustLinkIt - URLルーティング
 # 前提: このディレクトリ（Server/public/）がWebサーバーのDocumentRootであること。
 
+# セキュリティヘッダー（多層防御）。
+# 本アプリは同一オリジンの<script src>/<link>のみで完結し、外部CDNやインラインscript/styleを
+# 使わない構成のため、default-src 'self' の厳格なCSPで問題なく動作する。
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "DENY"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Content-Security-Policy "default-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+</IfModule>
+
 RewriteEngine On
 
 # 既に実ファイルが存在するリクエスト（例: /u/{hash}.png の画像直リンク）はそのまま静的配信する。

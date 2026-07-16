@@ -25,6 +25,16 @@ $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' :
 $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
 $method = $_SERVER['REQUEST_METHOD'] ?? '';
 
+// CSRF対策: 状態変更を伴うPOST/DELETEは、単純なクロスサイトの<form>送信では
+// 付与できないカスタムヘッダーを要求する（クロスオリジンのfetch/XHRで付与しようとしても
+// このオリジンはCORSを許可していないためプリフライトで弾かれる）。
+// 状態変更のないGET（一覧取得）は対象外。
+if (in_array($method, ['POST', 'DELETE'], true) && ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') !== 'XMLHttpRequest') {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => '不正なリクエストです。', 'code' => 403]);
+    exit;
+}
+
 if ($method === 'GET') {
     $limit = (int) ($_GET['limit'] ?? 30);
     $offset = (int) ($_GET['offset'] ?? 0);

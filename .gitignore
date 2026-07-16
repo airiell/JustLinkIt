@@ -495,3 +495,4 @@ Server/config.php
 # JustLinkIt サーバー: 実際にアップロードされたファイル本体（ランタイム生成物）
 Server/public/u/*
 !Server/public/u/.gitkeep
+!Server/public/u/.htaccess

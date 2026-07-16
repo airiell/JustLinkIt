@@ -250,7 +250,7 @@
 
     const response = await apiFetch(`../api/gallery.php?hash=${item.hash}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
       body: JSON.stringify({ action: 'add_tag', tag: tagValue }),
     });
     const data = await response.json();
@@ -266,7 +266,7 @@
   async function removeTag(item, tagName) {
     const response = await apiFetch(`../api/gallery.php?hash=${item.hash}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
       body: JSON.stringify({ action: 'remove_tag', tag: tagName }),
     });
     const data = await response.json();
@@ -373,7 +373,10 @@
       return;
     }
     const item = items[currentIndex];
-    const response = await apiFetch(`../api/gallery.php?hash=${item.hash}`, { method: 'DELETE' });
+    const response = await apiFetch(`../api/gallery.php?hash=${item.hash}`, {
+      method: 'DELETE',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    });
     const data = await response.json();
 
     if (!data.success) {
