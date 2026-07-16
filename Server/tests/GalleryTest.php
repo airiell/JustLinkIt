@@ -106,4 +106,98 @@ return function (TestRunner $runner): void {
 
         ($ctx['cleanup'])();
     });
+
+    $runner->test('list() includes each item\'s tags in alphabetical order', function (TestRunner $t): void {
+        $ctx = makeGalleryTestContext();
+        insertGalleryTestFile($ctx['pdo'], 'hash-tagged', 'png', 'image/png');
+        $ctx['gallery']->addTag('hash-tagged', 'zebra');
+        $ctx['gallery']->addTag('hash-tagged', 'apple');
+
+        $result = $ctx['gallery']->list(30, 0);
+
+        $t->assertSame(['apple', 'zebra'], $result['items'][0]['tags']);
+
+        ($ctx['cleanup'])();
+    });
+
+    $runner->test('addTag() creates a new tag and links it to the file', function (TestRunner $t): void {
+        $ctx = makeGalleryTestContext();
+        insertGalleryTestFile($ctx['pdo'], 'hash-a', 'png', 'image/png');
+
+        $tags = $ctx['gallery']->addTag('hash-a', 'landscape');
+
+        $t->assertSame(['landscape'], $tags);
+
+        $tagCount = (int) $ctx['pdo']->query('SELECT COUNT(*) FROM tags')->fetchColumn();
+        $t->assertSame(1, $tagCount);
+
+        ($ctx['cleanup'])();
+    });
+
+    $runner->test('addTag() reuses an existing tag row across files instead of duplicating it', function (TestRunner $t): void {
+        $ctx = makeGalleryTestContext();
+        insertGalleryTestFile($ctx['pdo'], 'hash-a', 'png', 'image/png');
+        insertGalleryTestFile($ctx['pdo'], 'hash-b', 'png', 'image/png');
+
+        $ctx['gallery']->addTag('hash-a', 'shared');
+        $ctx['gallery']->addTag('hash-b', 'shared');
+
+        $tagCount = (int) $ctx['pdo']->query('SELECT COUNT(*) FROM tags')->fetchColumn();
+        $t->assertSame(1, $tagCount, 'the same tag name should not create a second tags row');
+
+        ($ctx['cleanup'])();
+    });
+
+    $runner->test('addTag() adding the same tag twice does not duplicate it on the file', function (TestRunner $t): void {
+        $ctx = makeGalleryTestContext();
+        insertGalleryTestFile($ctx['pdo'], 'hash-a', 'png', 'image/png');
+
+        $ctx['gallery']->addTag('hash-a', 'repeat');
+        $tags = $ctx['gallery']->addTag('hash-a', 'repeat');
+
+        $t->assertSame(['repeat'], $tags);
+
+        ($ctx['cleanup'])();
+    });
+
+    $runner->test('addTag() trims whitespace and ignores an empty tag name', function (TestRunner $t): void {
+        $ctx = makeGalleryTestContext();
+        insertGalleryTestFile($ctx['pdo'], 'hash-a', 'png', 'image/png');
+
+        $ctx['gallery']->addTag('hash-a', '  spaced  ');
+        $tagsAfterEmpty = $ctx['gallery']->addTag('hash-a', '   ');
+
+        $t->assertSame(['spaced'], $tagsAfterEmpty);
+
+        ($ctx['cleanup'])();
+    });
+
+    $runner->test('addTag() returns null for an unknown hash', function (TestRunner $t): void {
+        $ctx = makeGalleryTestContext();
+
+        $t->assertSame(null, $ctx['gallery']->addTag('does-not-exist', 'x'));
+
+        ($ctx['cleanup'])();
+    });
+
+    $runner->test('removeTag() unlinks the tag from the file', function (TestRunner $t): void {
+        $ctx = makeGalleryTestContext();
+        insertGalleryTestFile($ctx['pdo'], 'hash-a', 'png', 'image/png');
+        $ctx['gallery']->addTag('hash-a', 'keep');
+        $ctx['gallery']->addTag('hash-a', 'remove-me');
+
+        $tags = $ctx['gallery']->removeTag('hash-a', 'remove-me');
+
+        $t->assertSame(['keep'], $tags);
+
+        ($ctx['cleanup'])();
+    });
+
+    $runner->test('removeTag() returns null for an unknown hash', function (TestRunner $t): void {
+        $ctx = makeGalleryTestContext();
+
+        $t->assertSame(null, $ctx['gallery']->removeTag('does-not-exist', 'x'));
+
+        ($ctx['cleanup'])();
+    });
 };

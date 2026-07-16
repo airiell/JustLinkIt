@@ -63,4 +63,42 @@ return function (TestRunner $runner): void {
 
         unlink($path);
     });
+
+    $runner->test('initialize() creates the tags and file_tags tables', function (TestRunner $t): void {
+        $path = sys_get_temp_dir() . '/justlinkit_test_' . uniqid() . '.sqlite3';
+
+        $pdo = Database::initialize($path);
+
+        $tagColumns = $pdo->query('PRAGMA table_info(tags)')->fetchAll(PDO::FETCH_COLUMN, 1);
+        foreach (['id', 'name'] as $expected) {
+            $t->assertTrue(in_array($expected, $tagColumns, true), "tags.{$expected} should exist");
+        }
+
+        $fileTagColumns = $pdo->query('PRAGMA table_info(file_tags)')->fetchAll(PDO::FETCH_COLUMN, 1);
+        foreach (['file_id', 'tag_id'] as $expected) {
+            $t->assertTrue(in_array($expected, $fileTagColumns, true), "file_tags.{$expected} should exist");
+        }
+
+        $pdo = null;
+        unlink($path);
+    });
+
+    $runner->test('deleting a file cascades to remove its file_tags links', function (TestRunner $t): void {
+        $path = sys_get_temp_dir() . '/justlinkit_test_' . uniqid() . '.sqlite3';
+
+        $pdo = Database::initialize($path);
+        $pdo->exec("INSERT INTO files (hash, extension, mime_type) VALUES ('abc', 'png', 'image/png')");
+        $fileId = (int) $pdo->lastInsertId();
+        $pdo->exec("INSERT INTO tags (name) VALUES ('foo')");
+        $tagId = (int) $pdo->lastInsertId();
+        $pdo->exec("INSERT INTO file_tags (file_id, tag_id) VALUES ({$fileId}, {$tagId})");
+
+        $pdo->exec("DELETE FROM files WHERE id = {$fileId}");
+        $remaining = (int) $pdo->query('SELECT COUNT(*) FROM file_tags')->fetchColumn();
+
+        $t->assertSame(0, $remaining, 'file_tags row should be removed via ON DELETE CASCADE');
+
+        $pdo = null;
+        unlink($path);
+    });
 };

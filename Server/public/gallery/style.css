@@ -104,18 +104,38 @@ main {
   display: block;
 }
 
-.card .upload-date {
+.card .caption {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
   background: linear-gradient(transparent, rgba(0, 0, 0, 0.9));
-  color: #fff;
-  font-size: 1.2rem;
-  padding: 28px 10px 12px;
+  padding: 28px 10px 10px;
   text-align: center;
   pointer-events: none;
   text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+.card .upload-date {
+  color: #fff;
+  font-size: 1.2rem;
+}
+
+.card .card-tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.card .card-tag-chip {
+  display: inline-block;
+  background-color: rgba(255, 255, 255, 0.15);
+  color: var(--text-main);
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 10px;
 }
 
 .card .video-badge {
@@ -153,6 +173,88 @@ main {
 
 .card .copy-button.copied {
   color: var(--accent-color);
+}
+
+.card .tag-button {
+  position: absolute;
+  top: 8px;
+  left: 44px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: var(--text-main);
+  font-size: 0.9rem;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 5;
+}
+
+.card .tag-button:hover {
+  background-color: rgba(0, 0, 0, 0.9);
+}
+
+.tag-popover {
+  position: absolute;
+  z-index: 100;
+  width: 220px;
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  padding: 10px;
+}
+
+.tag-popover-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag-popover-list:not(:empty) {
+  margin-bottom: 8px;
+}
+
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--text-main);
+  font-size: 0.8rem;
+  padding: 4px 6px 4px 12px;
+  border-radius: 14px;
+}
+
+.tag-chip button {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.9rem;
+  line-height: 1;
+  padding: 2px 4px;
+}
+
+.tag-chip button:hover {
+  color: var(--danger-color);
+}
+
+.tag-popover-form input {
+  width: 100%;
+  background-color: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--text-main);
+  font-size: 0.85rem;
+  padding: 6px 10px;
+  border-radius: 14px;
+  text-align: center;
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .empty-message,
@@ -260,6 +362,27 @@ dialog#login-dialog::backdrop {
   text-shadow: 0 2px 10px rgba(0, 0, 0, 1);
 }
 
+.viewer-tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 10px;
+  max-width: 90vw;
+}
+
+.viewer-tag-chip-ro {
+  background-color: rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--text-main);
+  font-size: 0.75rem;
+  padding: 3px 10px;
+  border-radius: 12px;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+/* 15%幅のこのゾーンはホバーで矢印を浮かび上がらせるための領域であり、クリック対象ではない
+   （クリックはボタン本体である.viewer-nav-arrowのみで受け付ける）。 */
 .viewer-nav-zone {
   position: absolute;
   top: 0;
@@ -268,13 +391,9 @@ dialog#login-dialog::backdrop {
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
   opacity: 0;
   transition: opacity 0.3s;
   z-index: 10;
-  border: none;
-  background: transparent;
-  padding: 0;
 }
 
 .viewer-nav-zone:hover {
@@ -301,6 +420,8 @@ dialog#login-dialog::backdrop {
   justify-content: center;
   border-radius: 50%;
   border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 0;
+  cursor: pointer;
 }
 
 .viewer-close {

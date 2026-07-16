@@ -47,6 +47,40 @@ if ($method === 'GET') {
     exit;
 }
 
+if ($method === 'POST') {
+    $hash = (string) ($_GET['hash'] ?? '');
+    if (!preg_match('/^[a-f0-9]{64}$/', $hash)) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => '不正なハッシュ値です。', 'code' => 400]);
+        exit;
+    }
+
+    $input = json_decode(file_get_contents('php://input') ?: '', true);
+    $action = is_array($input) ? (string) ($input['action'] ?? '') : '';
+    $tag = is_array($input) ? (string) ($input['tag'] ?? '') : '';
+
+    $tags = match ($action) {
+        'add_tag' => $gallery->addTag($hash, $tag),
+        'remove_tag' => $gallery->removeTag($hash, $tag),
+        default => false,
+    };
+
+    if ($tags === false) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => '不正な操作です。', 'code' => 400]);
+        exit;
+    }
+
+    if ($tags === null) {
+        http_response_code(404);
+        echo json_encode(['success' => false, 'message' => '見つかりません。', 'code' => 404]);
+        exit;
+    }
+
+    echo json_encode(['success' => true, 'tags' => $tags]);
+    exit;
+}
+
 if ($method === 'DELETE') {
     parse_str(file_get_contents('php://input') ?: '', $body);
     $hash = (string) ($_GET['hash'] ?? $body['hash'] ?? '');

@@ -31,17 +31,25 @@
 <dialog id="viewer-dialog">
   <div class="viewer-wrapper">
     <button type="button" id="viewer-close" class="viewer-close" aria-label="閉じる">&times; 閉じる</button>
-    <div id="viewer-prev" class="viewer-nav-zone viewer-prev-zone" aria-label="前へ">
-      <div class="viewer-nav-arrow">&lsaquo;</div>
+    <div class="viewer-nav-zone viewer-prev-zone">
+      <button type="button" id="viewer-prev" class="viewer-nav-arrow" aria-label="前へ">&lsaquo;</button>
     </div>
-    <div id="viewer-next" class="viewer-nav-zone viewer-next-zone" aria-label="次へ">
-      <div class="viewer-nav-arrow">&rsaquo;</div>
+    <div class="viewer-nav-zone viewer-next-zone">
+      <button type="button" id="viewer-next" class="viewer-nav-arrow" aria-label="次へ">&rsaquo;</button>
     </div>
     <div id="viewer-media" class="viewer-media"></div>
     <div id="viewer-date" class="viewer-date"></div>
+    <div id="viewer-tag-list" class="viewer-tag-list"></div>
     <button type="button" id="viewer-delete" class="viewer-delete">削除</button>
   </div>
 </dialog>
+
+<div id="tag-popover" class="tag-popover" hidden>
+  <div id="tag-popover-list" class="tag-popover-list"></div>
+  <form id="tag-popover-form" class="tag-popover-form">
+    <input type="text" id="tag-popover-input" placeholder="タグを追加..." maxlength="50" autocomplete="off">
+  </form>
+</div>
 
 <script src="app.js"></script>
 </body>
