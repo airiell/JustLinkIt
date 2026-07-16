@@ -40,6 +40,15 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    // トレイメニューでの設定変更（トグル/監視フォルダ/サーバーURL）は
+    // すべてこのメソッド経由で即時保存する。設定はウィンドウを持たないため
+    // 明示的な「保存」操作がなく、変更＝保存とする。
+    public async Task SaveSettingsAsync()
+    {
+        await Settings.SaveAsync();
+        RestartWatching();
+    }
+
     public async Task UploadFileAsync(string filePath)
     {
         if (string.IsNullOrWhiteSpace(Settings.ServerUploadUrl))

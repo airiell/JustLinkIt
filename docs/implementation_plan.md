@@ -62,7 +62,7 @@ Windows用常駐アプリのプロジェクト初期化を行います。
 - [x] `ViewModels/MainViewModel.cs` を作成し、ファイル検知 → API送信 → クリップボードコピー → 設定に応じたブラウザ表示/ファイル削除 の一連のフローを実装する。（CommunityToolkit.Mvvm導入、`ObservableObject`/`RelayCommand`でボイラープレート削減）
 - [x] `Views/TrayIcon.xaml` 等を作成し、タスクトレイへの常駐アイコンと右クリックメニューを実装する。（協議の上H.NotifyIcon.Wpfを採用。`TaskbarIcon`をルート要素とし、`App.xaml`は`ShutdownMode=OnExplicitShutdown`+`StartupUri`削除でウィンドウ非表示のまま常駐する構成に変更）
 - [x] トレイメニューから「手動アップロード（ファイル選択 / クリップボード）」を実行するイベント処理を紐付ける。（ファイル選択は`OpenFileDialog`をコード behind から呼び出し、選択後の処理はViewModelのメソッドに委譲）
-- [ ] `Views/MainWindow.xaml` を作成し、設定項目（トグルスイッチ等）を変更・保存するための設定画面UIを実装する。
+- [x] 設定項目を変更・保存するUIを実装する。（協議の上、専用の設定画面(`MainWindow.xaml`)は作らず、トレイメニューから直接変更する方式に変更。`MainWindow.xaml`は削除。ON/OFFはチェック可能なメニュー項目、監視フォルダは`OpenFolderDialog`、サーバーURLは`Microsoft.VisualBasic.Interaction.InputBox`。変更と同時に`MainViewModel.SaveSettingsAsync()`で即時保存）
 - [ ] 初回起動時に「送る(SendTo)」メニューへショートカットを追加するか確認するダイアログ処理を実装する。
 - [ ] コマンドライン引数からファイルパスを受け取り、直接アップロードする機能（送るメニュー連携用）を実装する。
 

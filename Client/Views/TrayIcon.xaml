@@ -8,7 +8,19 @@
             <MenuItem Header="ファイルを選択してアップロード" Click="UploadFile_Click" />
             <MenuItem Header="クリップボードの画像をアップロード" Command="{Binding UploadFromClipboardCommand}" />
             <Separator />
-            <MenuItem Header="設定..." Click="OpenSettings_Click" />
+            <MenuItem Header="設定">
+                <MenuItem Header="ブラウザで自動的に開く"
+                          IsCheckable="True"
+                          IsChecked="{Binding Settings.OpenBrowserOnUpload, Mode=TwoWay}"
+                          Click="SettingToggled_Click" />
+                <MenuItem Header="アップロード後にローカルファイルを削除"
+                          IsCheckable="True"
+                          IsChecked="{Binding Settings.DeleteLocalFileAfterUpload, Mode=TwoWay}"
+                          Click="SettingToggled_Click" />
+                <Separator />
+                <MenuItem Header="監視フォルダを変更..." Click="ChangeWatchFolder_Click" />
+                <MenuItem Header="アップロード先URLを設定..." Click="ChangeServerUrl_Click" />
+            </MenuItem>
             <Separator />
             <MenuItem Header="終了" Command="{Binding ExitCommand}" />
         </ContextMenu>
