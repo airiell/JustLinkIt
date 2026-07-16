@@ -139,6 +139,53 @@ return function (TestRunner $runner): void {
         ($ctx['cleanup'])();
     });
 
+    $runner->test('list() filters by tag when a tagFilter is given', function (TestRunner $t): void {
+        $ctx = makeGalleryTestContext();
+        insertGalleryTestFile($ctx['pdo'], 'hash-cat', 'png', 'image/png');
+        insertGalleryTestFile($ctx['pdo'], 'hash-dog', 'png', 'image/png');
+        $ctx['gallery']->addTag('hash-cat', 'cat');
+        $ctx['gallery']->addTag('hash-dog', 'dog');
+
+        $result = $ctx['gallery']->list(30, 0, 'cat');
+
+        $t->assertSame(1, count($result['items']));
+        $t->assertSame('hash-cat', $result['items'][0]['hash']);
+
+        ($ctx['cleanup'])();
+    });
+
+    $runner->test('list() with an unmatched tagFilter returns no items', function (TestRunner $t): void {
+        $ctx = makeGalleryTestContext();
+        insertGalleryTestFile($ctx['pdo'], 'hash-cat', 'png', 'image/png');
+        $ctx['gallery']->addTag('hash-cat', 'cat');
+
+        $result = $ctx['gallery']->list(30, 0, 'does-not-exist');
+
+        $t->assertSame(0, count($result['items']));
+        $t->assertSame(false, $result['has_more']);
+
+        ($ctx['cleanup'])();
+    });
+
+    $runner->test('list() paginates correctly when a tagFilter is applied', function (TestRunner $t): void {
+        $ctx = makeGalleryTestContext();
+        for ($i = 0; $i < 3; $i++) {
+            insertGalleryTestFile($ctx['pdo'], "hash-{$i}", 'png', 'image/png');
+            $ctx['gallery']->addTag("hash-{$i}", 'shared-tag');
+        }
+        insertGalleryTestFile($ctx['pdo'], 'hash-untagged', 'png', 'image/png');
+
+        $firstPage = $ctx['gallery']->list(2, 0, 'shared-tag');
+        $secondPage = $ctx['gallery']->list(2, 2, 'shared-tag');
+
+        $t->assertSame(2, count($firstPage['items']));
+        $t->assertSame(true, $firstPage['has_more']);
+        $t->assertSame(1, count($secondPage['items']));
+        $t->assertSame(false, $secondPage['has_more']);
+
+        ($ctx['cleanup'])();
+    });
+
     $runner->test('addTag() creates a new tag and links it to the file', function (TestRunner $t): void {
         $ctx = makeGalleryTestContext();
         insertGalleryTestFile($ctx['pdo'], 'hash-a', 'png', 'image/png');
@@ -187,6 +234,21 @@ return function (TestRunner $runner): void {
         $tagsAfterEmpty = $ctx['gallery']->addTag('hash-a', '   ');
 
         $t->assertSame(['spaced'], $tagsAfterEmpty);
+
+        ($ctx['cleanup'])();
+    });
+
+    $runner->test('addTag() ignores a tag name longer than the maximum allowed length', function (TestRunner $t): void {
+        $ctx = makeGalleryTestContext();
+        insertGalleryTestFile($ctx['pdo'], 'hash-a', 'png', 'image/png');
+
+        $tooLong = str_repeat('a', 51);
+        $tags = $ctx['gallery']->addTag('hash-a', $tooLong);
+
+        $t->assertSame([], $tags);
+
+        $tagCount = (int) $ctx['pdo']->query('SELECT COUNT(*) FROM tags')->fetchColumn();
+        $t->assertSame(0, $tagCount, 'an over-length tag must not be persisted');
 
         ($ctx['cleanup'])();
     });

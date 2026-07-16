@@ -207,6 +207,25 @@ return function (TestRunner $runner): void {
         ($ctx['cleanup'])();
     });
 
+    $runner->test('handleUpload() rejects a tmp_name that fails the uploaded-file check', function (TestRunner $t): void {
+        $ctx = makeUploaderTestContext();
+        // このパスは意図的に作成せず、file_exists()チェッカーがfalseを返す状況を再現する。
+        $missingPath = sys_get_temp_dir() . '/justlinkit_missing_' . uniqid();
+
+        $result = $ctx['uploader']->handleUpload([
+            'name' => 'screenshot.png',
+            'type' => 'image/png',
+            'tmp_name' => $missingPath,
+            'error' => UPLOAD_ERR_OK,
+            'size' => 100,
+        ]);
+
+        $t->assertSame(false, $result['success'] ?? null);
+        $t->assertSame(400, $result['code'] ?? null);
+
+        ($ctx['cleanup'])();
+    });
+
     $runner->test('handleUpload() deduplicates identical content into a single record', function (TestRunner $t): void {
         $ctx = makeUploaderTestContext();
         $png = base64_decode(TEST_PNG_BASE64);
