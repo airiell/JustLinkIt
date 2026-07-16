@@ -16,6 +16,9 @@ require_once __DIR__ . '/../src/Uploader.php';
 // 1x1 の透明PNG。MIME実体検証をパスできる最小のテスト用画像データ。
 const TEST_PNG_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
 
+// ftypボックスのみの最小MP4。finfoでvideo/mp4と判定される最小限のテスト用動画データ。
+const TEST_MP4_HEX = '000000186674797069736f6d0000020069736f6d69736f326d703431';
+
 /**
  * @return array{uploader: Uploader, pdo: PDO, uploadDirPath: string, cleanup: callable}
  */
@@ -78,6 +81,8 @@ return function (TestRunner $runner): void {
 
         $t->assertSame(true, $result['success'] ?? null);
         $t->assertSame($expectedHash, $result['hash'] ?? null);
+        $t->assertSame('png', $result['extension'] ?? null);
+        $t->assertSame(false, $result['is_video'] ?? null);
         $t->assertTrue(
             file_exists($ctx['uploadDirPath'] . '/' . $expectedHash . '.png'),
             'stored file should exist'
@@ -89,6 +94,34 @@ return function (TestRunner $runner): void {
 
         $t->assertSame('png', $row['extension'] ?? null);
         $t->assertSame('image/png', $row['mime_type'] ?? null);
+
+        @unlink($srcPath);
+        ($ctx['cleanup'])();
+    });
+
+    $runner->test('handleUpload() stores a valid MP4 and flags it as video', function (TestRunner $t): void {
+        $ctx = makeUploaderTestContext();
+        $mp4 = hex2bin(TEST_MP4_HEX);
+        $srcPath = writeUploaderTestFile($mp4);
+
+        $result = $ctx['uploader']->handleUpload([
+            'name' => 'recording.mp4',
+            'type' => 'video/mp4',
+            'tmp_name' => $srcPath,
+            'error' => UPLOAD_ERR_OK,
+            'size' => strlen($mp4),
+        ]);
+
+        $expectedHash = hash('sha256', $mp4);
+
+        $t->assertSame(true, $result['success'] ?? null);
+        $t->assertSame($expectedHash, $result['hash'] ?? null);
+        $t->assertSame('mp4', $result['extension'] ?? null);
+        $t->assertSame(true, $result['is_video'] ?? null);
+        $t->assertTrue(
+            file_exists($ctx['uploadDirPath'] . '/' . $expectedHash . '.mp4'),
+            'stored file should exist'
+        );
 
         @unlink($srcPath);
         ($ctx['cleanup'])();

@@ -17,6 +17,12 @@
 - [x] `Uploader.php` にて、ファイルの保存処理とSQLiteへのレコード追加処理を実装する。（同一hashが既存の場合は保存・INSERTをスキップし重複防止）
 - [x] `Server/public/api/upload.php` を作成し、POSTリクエストを受け付けてJSONレスポンス（成功/失敗、URL）を返すエンドポイントを実装する。
 
+## Phase 2.5: 仕様と実装の乖離調査・修正
+現在の実装（Phase 2まで）が、`architecture.md` で定義された本来の仕様からズレていないか検証し、乖離があれば修正します。
+- [x] `docs/architecture.md` を読み込み、「画像の場合は実ファイルへの直リンクを返す」「動画の場合のみビューアー用URLを返す」という仕様を再確認する。
+- [x] 現在の `Server/public/api/upload.php` および `Server/src/Uploader.php` のコードを確認し、APIのレスポンスURL生成ロジックが上記仕様と乖離していないか調査する。
+- [x] 乖離が発見された場合、修正方法を提示する。（乖離あり：画像・動画とも常に拡張子なしビューアーURLを返していた。§3.2/§4の記述矛盾も併せて`docs/architecture.md`を修正した上で、`Uploader::handleUpload()`の戻り値に`extension`/`is_video`を追加し、`upload.php`でURL生成をファイル種別により分岐するよう修正・テスト追加・実HTTPリクエストで検証済み）
+
 ## Phase 3: サーバーサイド ビューアーとルーティング設定
 OGP対応のHTMLを返し、SNS等で展開されるようにします。
 - [ ] `Server/src/Viewer.php` を作成し、ハッシュ値から対象ファイルを特定する処理を実装する。

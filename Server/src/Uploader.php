@@ -16,6 +16,13 @@ final class Uploader
         'video/mp4' => 'mp4',
     ];
 
+    private const VIDEO_EXTENSIONS = ['mp4'];
+
+    public static function isVideoExtension(string $extension): bool
+    {
+        return in_array($extension, self::VIDEO_EXTENSIONS, true);
+    }
+
     private readonly \Closure $uploadedFileChecker;
 
     public function __construct(
@@ -29,7 +36,7 @@ final class Uploader
 
     /**
      * @param array{name?: string, type?: string, tmp_name?: string, error?: int, size?: int} $file
-     * @return array{success: true, hash: string}|array{success: false, message: string, code: int}
+     * @return array{success: true, hash: string, extension: string, is_video: bool}|array{success: false, message: string, code: int}
      */
     public function handleUpload(array $file): array
     {
@@ -58,7 +65,12 @@ final class Uploader
             $this->persist($tmpPath, $hash, $extension, $mimeType);
         }
 
-        return ['success' => true, 'hash' => $hash];
+        return [
+            'success' => true,
+            'hash' => $hash,
+            'extension' => $extension,
+            'is_video' => self::isVideoExtension($extension),
+        ];
     }
 
     /**

@@ -30,6 +30,10 @@ if ($result['success'] !== true) {
 
 $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
 $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-$url = "{$scheme}://{$host}/{$config->uploadDir()}/{$result['hash']}";
+$base = "{$scheme}://{$host}/{$config->uploadDir()}/{$result['hash']}";
+
+// 動画のみOGPビューアーURL（拡張子なし、Phase3のViewer.php行き）。
+// 画像は実ファイルへの直リンク（拡張子付き、静的配信）を返す。
+$url = $result['is_video'] ? $base : "{$base}.{$result['extension']}";
 
 echo json_encode(['success' => true, 'url' => $url]);
