@@ -51,4 +51,23 @@ final class TestRunner
             throw new \RuntimeException($message);
         }
     }
+
+    /**
+     * @param class-string<\Throwable> $expectedClass
+     */
+    public function assertThrows(string $expectedClass, callable $fn, string $message = ''): void
+    {
+        try {
+            $fn();
+        } catch (\Throwable $e) {
+            if ($e instanceof $expectedClass) {
+                return;
+            }
+            throw new \RuntimeException(
+                $message !== '' ? $message : sprintf('Expected %s, got %s', $expectedClass, get_class($e))
+            );
+        }
+
+        throw new \RuntimeException($message !== '' ? $message : "Expected {$expectedClass} to be thrown, none was");
+    }
 }

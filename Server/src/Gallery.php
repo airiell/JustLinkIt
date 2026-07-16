@@ -65,7 +65,9 @@ final class Gallery
             return false;
         }
 
-        $filePath = $this->config->uploadDirPath() . '/' . $hash . '.' . $row['extension'];
+        // $hash はAPI層（gallery.php）で64桁16進数に正規表現検証済みだが、
+        // ファイルパス構築部分自体は入力元を信頼しない多層防御としてbasename()を適用する。
+        $filePath = $this->config->uploadDirPath() . '/' . basename($hash) . '.' . basename($row['extension']);
         if (is_file($filePath)) {
             unlink($filePath);
         }

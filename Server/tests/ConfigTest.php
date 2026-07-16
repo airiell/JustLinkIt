@@ -32,4 +32,29 @@ return function (TestRunner $runner): void {
         $t->assertSame('/tmp/custom-dir', $config->uploadDirPath());
         $t->assertSame('hashed-value', $config->galleryPasswordHash());
     });
+
+    $runner->test('uploadDirPath() resolves the default upload_dir under Server/public', function (TestRunner $t): void {
+        $config = new Config();
+        $path = str_replace('\\', '/', $config->uploadDirPath());
+
+        $t->assertTrue(str_ends_with($path, '/public/u'), "unexpected path: {$path}");
+    });
+
+    $runner->test('uploadDirPath() rejects a traversal sequence in upload_dir', function (TestRunner $t): void {
+        $config = new Config(['upload_dir' => '../../etc']);
+
+        $t->assertThrows(\RuntimeException::class, fn () => $config->uploadDirPath());
+    });
+
+    $runner->test('uploadDirPath() rejects an absolute upload_dir', function (TestRunner $t): void {
+        $config = new Config(['upload_dir' => '/etc/passwd']);
+
+        $t->assertThrows(\RuntimeException::class, fn () => $config->uploadDirPath());
+    });
+
+    $runner->test('uploadDirPath() still honors an explicit upload_dir_path override even when upload_dir looks unsafe', function (TestRunner $t): void {
+        $config = new Config(['upload_dir' => '../unsafe', 'upload_dir_path' => '/tmp/explicit-override']);
+
+        $t->assertSame('/tmp/explicit-override', $config->uploadDirPath());
+    });
 };

@@ -115,7 +115,9 @@ final class Uploader
             mkdir($dir, 0755, true);
         }
 
-        $destination = $dir . '/' . $hash . '.' . $extension;
+        // $hash/$extension は常にこのクラス内部で計算・固定リストから決定される値だが、
+        // ファイルパス構築部分自体は入力元を信頼しない多層防御としてbasename()を適用する。
+        $destination = $dir . '/' . basename($hash) . '.' . basename($extension);
         if (!move_uploaded_file($tmpPath, $destination)) {
             copy($tmpPath, $destination);
         }

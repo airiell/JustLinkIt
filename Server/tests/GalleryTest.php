@@ -107,6 +107,25 @@ return function (TestRunner $runner): void {
         ($ctx['cleanup'])();
     });
 
+    $runner->test('delete() applies basename() so a traversal-crafted hash cannot escape the upload directory', function (TestRunner $t): void {
+        $ctx = makeGalleryTestContext();
+        // API層（gallery.php）の正規表現検証を経由しない前提で、DB内に不正なhashが
+        // 混入したケースを直接再現し、Gallery側の多層防御（basename()）を検証する。
+        $maliciousHash = '../../../evil';
+        insertGalleryTestFile($ctx['pdo'], $maliciousHash, 'png', 'image/png');
+
+        // basename()を適用しない実装であれば削除されてしまうはずのファイル。
+        $sentinelPath = realpath(sys_get_temp_dir()) . '/evil.png';
+        file_put_contents($sentinelPath, 'sentinel');
+
+        $ctx['gallery']->delete($maliciousHash);
+
+        $t->assertTrue(file_exists($sentinelPath), 'file outside the upload directory must survive');
+
+        @unlink($sentinelPath);
+        ($ctx['cleanup'])();
+    });
+
     $runner->test('list() includes each item\'s tags in alphabetical order', function (TestRunner $t): void {
         $ctx = makeGalleryTestContext();
         insertGalleryTestFile($ctx['pdo'], 'hash-tagged', 'png', 'image/png');
