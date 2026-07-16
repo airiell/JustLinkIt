@@ -3,6 +3,7 @@
 
   const grid = document.getElementById('grid');
   const emptyMessage = document.getElementById('empty-message');
+  const loadingMessage = document.getElementById('loading-message');
   const sentinel = document.getElementById('sentinel');
 
   const loginDialog = document.getElementById('login-dialog');
@@ -12,6 +13,7 @@
 
   const viewerDialog = document.getElementById('viewer-dialog');
   const viewerMedia = document.getElementById('viewer-media');
+  const viewerDate = document.getElementById('viewer-date');
   const viewerClose = document.getElementById('viewer-close');
   const viewerPrev = document.getElementById('viewer-prev');
   const viewerNext = document.getElementById('viewer-next');
@@ -26,6 +28,14 @@
 
   function apiFetch(path, options = {}) {
     return fetch(path, { ...options, credentials: 'same-origin' });
+  }
+
+  function formatDate(sqlDateTime) {
+    // SQLiteのdatetime('now')はUTCの "YYYY-MM-DD HH:MM:SS"。
+    // ISO形式に変換してから解釈させることでローカル時刻に正しく変換する。
+    const date = new Date(sqlDateTime.replace(' ', 'T') + 'Z');
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${date.getFullYear()}/${pad(date.getMonth() + 1)}/${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
   }
 
   function renderCard(item) {
@@ -52,8 +62,40 @@
       card.appendChild(img);
     }
 
+    const dateLabel = document.createElement('div');
+    dateLabel.className = 'upload-date';
+    dateLabel.textContent = formatDate(item.created_at);
+    card.appendChild(dateLabel);
+
+    const copyButton = document.createElement('button');
+    copyButton.type = 'button';
+    copyButton.className = 'copy-button';
+    copyButton.textContent = '🔗';
+    copyButton.setAttribute('aria-label', 'URLをコピー');
+    copyButton.addEventListener('click', (event) => {
+      // カード全体のクリック（ビューアーを開く動作）を発火させない
+      event.stopPropagation();
+      copyUrlToClipboard(item.url, copyButton);
+    });
+    card.appendChild(copyButton);
+
     card.addEventListener('click', () => openViewer(items.indexOf(item)));
     grid.appendChild(card);
+  }
+
+  async function copyUrlToClipboard(url, button) {
+    try {
+      await navigator.clipboard.writeText(url);
+      const original = button.textContent;
+      button.textContent = '✓';
+      button.classList.add('copied');
+      setTimeout(() => {
+        button.textContent = original;
+        button.classList.remove('copied');
+      }, 1200);
+    } catch (error) {
+      // クリップボードAPIが使えない環境（非HTTPS等）では何もしない。
+    }
   }
 
   async function loadNextPage() {
@@ -85,6 +127,7 @@
     offset += data.items.length;
     hasMore = data.has_more;
     emptyMessage.hidden = items.length > 0;
+    loadingMessage.hidden = !hasMore;
 
     if (!hasMore && observer) {
       observer.disconnect();
@@ -145,6 +188,8 @@
       img.alt = '';
       viewerMedia.appendChild(img);
     }
+
+    viewerDate.textContent = formatDate(item.created_at);
   }
 
   function openViewer(index) {
@@ -205,6 +250,32 @@
   viewerPrev.addEventListener('click', () => showViewerAt(currentIndex - 1));
   viewerNext.addEventListener('click', () => showViewerAt(currentIndex + 1));
   viewerDelete.addEventListener('click', deleteCurrentItem);
+
+  // アイコン類（ナビゲーションゾーン・閉じる・削除ボタン）は明示的に除外。
+  // 画像/動画については、DOM要素の当たり判定（event.target）に頼らず、
+  // クリック座標がメディア要素の実測サイズ(getBoundingClientRect)の内側かどうかを
+  // 直接判定する。ラッパーdivのサイズやflexboxのshrink-to-fit挙動のズレに
+  // 影響されないようにするため。
+  viewerDialog.addEventListener('click', (event) => {
+    if (event.target.closest('.viewer-nav-zone, .viewer-close, .viewer-delete')) {
+      return;
+    }
+
+    const mediaEl = viewerMedia.querySelector('img, video');
+    if (mediaEl) {
+      const rect = mediaEl.getBoundingClientRect();
+      const withinMedia =
+        event.clientX >= rect.left &&
+        event.clientX <= rect.right &&
+        event.clientY >= rect.top &&
+        event.clientY <= rect.bottom;
+      if (withinMedia) {
+        return;
+      }
+    }
+
+    closeViewer();
+  });
 
   document.addEventListener('keydown', (event) => {
     if (!viewerDialog.open) {

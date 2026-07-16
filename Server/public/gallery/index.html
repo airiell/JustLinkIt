@@ -15,6 +15,7 @@
 <main>
   <div id="grid" class="grid"></div>
   <p id="empty-message" class="empty-message" hidden>アップロードされたファイルはまだありません。</p>
+  <p id="loading-message" class="loading-message">読み込み中...</p>
   <div id="sentinel" class="sentinel"></div>
 </main>
 
@@ -28,11 +29,18 @@
 </dialog>
 
 <dialog id="viewer-dialog">
-  <button type="button" id="viewer-close" class="viewer-close" aria-label="閉じる">&times;</button>
-  <button type="button" id="viewer-prev" class="viewer-nav viewer-prev" aria-label="前へ">&lsaquo;</button>
-  <button type="button" id="viewer-next" class="viewer-nav viewer-next" aria-label="次へ">&rsaquo;</button>
-  <div id="viewer-media" class="viewer-media"></div>
-  <button type="button" id="viewer-delete" class="viewer-delete">削除</button>
+  <div class="viewer-wrapper">
+    <button type="button" id="viewer-close" class="viewer-close" aria-label="閉じる">&times; 閉じる</button>
+    <div id="viewer-prev" class="viewer-nav-zone viewer-prev-zone" aria-label="前へ">
+      <div class="viewer-nav-arrow">&lsaquo;</div>
+    </div>
+    <div id="viewer-next" class="viewer-nav-zone viewer-next-zone" aria-label="次へ">
+      <div class="viewer-nav-arrow">&rsaquo;</div>
+    </div>
+    <div id="viewer-media" class="viewer-media"></div>
+    <div id="viewer-date" class="viewer-date"></div>
+    <button type="button" id="viewer-delete" class="viewer-delete">削除</button>
+  </div>
 </dialog>
 
 <script src="app.js"></script>
