@@ -1,0 +1,26 @@
+# アップロード済みファイルの保存ディレクトリでのスクリプト実行を無効化する（多層防御）。
+# ファイル名のSHA-256ハッシュ化・アップロード時のMIME実体ホワイトリスト制限により
+# 実行可能ファイルがここに置かれることは通常起こり得ないが、
+# 万一の際にWebサーバーレベルでも実行を止める。
+
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>
+
+<IfModule mod_php7.c>
+    php_flag engine off
+</IfModule>
+
+<FilesMatch "\.(php|phtml|php[0-9]|pht|phar|cgi|pl)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# PHP-FPM等、Actionハンドラ経由でスクリプトとして実行される構成への対策。
+RemoveHandler .php .phtml .php3 .php4 .php5 .php7 .pht .phar
+RemoveType .php .phtml .php3 .php4 .php5 .php7 .pht .phar

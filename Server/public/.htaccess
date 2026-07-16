@@ -1,0 +1,23 @@
+# JustLinkIt - URLルーティング
+# 前提: このディレクトリ（Server/public/）がWebサーバーのDocumentRootであること。
+
+# セキュリティヘッダー（多層防御）。
+# 本アプリは同一オリジンの<script src>/<link>のみで完結し、外部CDNやインラインscript/styleを
+# 使わない構成のため、default-src 'self' の厳格なCSPで問題なく動作する。
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "DENY"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Content-Security-Policy "default-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+</IfModule>
+
+RewriteEngine On
+
+# 既に実ファイルが存在するリクエスト（例: /u/{hash}.png の画像直リンク）はそのまま静的配信する。
+RewriteCond %{REQUEST_FILENAME} !-f
+
+# 拡張子なしの /{アップロードディレクトリ}/{64桁ハッシュ値}（動画のみ）を viewer.php にルーティングする。
+# ディレクトリ名は config.php の upload_dir に依存するためハードコードせず、
+# 「1階層のディレクトリ名 + 64桁16進数ハッシュ」というパターンのみで判定する
+# （ハッシュ値そのものが十分な長さのランダム性を持つため、これが安全性の境界となる）。
+RewriteRule ^[^/]+/([0-9a-f]{64})$ viewer.php?hash=$1 [L,QSA]
