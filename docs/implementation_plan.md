@@ -44,10 +44,10 @@ OGP対応のHTMLを返し、SNS等で展開されるようにします。
 
 ## Phase 5: クライアントサイド基盤（C# WPF）
 Windows用常駐アプリのプロジェクト初期化を行います。
-- [ ] C# WPFプロジェクト（`.NET`）として `Client/JustLinkIt.Client` を作成する。
-- [ ] HTTP通信、JSON解析などに必要なNuGetパッケージをインストールする。
-- [ ] `Models/AppSettings.cs` を作成し、「ブラウザ自動表示」「ローカルファイルの削除」などの設定情報を保持するクラスを定義する。
-- [ ] JSONファイルへの設定情報の保存と読み込みロジックを実装する。
+- [x] C# WPFプロジェクト（`.NET`）として `Client/JustLinkIt.Client` を作成する。（前フェーズの骨組み作成タスクで作成済み。`Client/JustLinkIt.Client.csproj`、`net10.0-windows`）
+- [x] HTTP通信、JSON解析などに必要なNuGetパッケージをインストールする。（HttpClient/System.Text.Jsonは.NET標準機能のためNuGet追加は不要と判断。トレイアイコン用ライブラリの選定はPhase7に協議の上で保留）
+- [x] `Models/AppSettings.cs` を作成し、「ブラウザ自動表示」「ローカルファイルの削除」などの設定情報を保持するクラスを定義する。（`ServerUploadUrl`は設計書§3.1に明記はないが、クライアントの動作上必須のため追加）
+- [x] JSONファイルへの設定情報の保存と読み込みロジックを実装する。（`AppSettings.LoadAsync()`/`SaveAsync()`、保存先はexeと同じフォルダの`settings.json`（協議の上ポータブル方式に決定）。壊れたJSONは既定値にフォールバックしクラッシュしない）
 
 ## Phase 6: クライアントサイド コアロジックの実装
 常駐アプリの心臓部となる監視と通信処理を作ります。
