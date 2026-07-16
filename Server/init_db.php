@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace JustLinkIt\Server;
 
+require_once __DIR__ . '/src/Config.php';
 require_once __DIR__ . '/src/Database.php';
 
-$dbPath = __DIR__ . '/data/gallery.sqlite3';
+$dbPath = Config::load()->databasePath();
 
 Database::initialize($dbPath);
 

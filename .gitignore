@@ -486,3 +486,6 @@ _workspace/
 
 # JustLinkIt サーバー: 実行時に生成されるSQLiteデータベース本体
 Server/data/*.sqlite3
+
+# JustLinkIt サーバー: 環境ごとのローカル設定（config.example.php からコピーして作成）
+Server/config.php

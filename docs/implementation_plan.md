@@ -12,10 +12,10 @@
 
 ## Phase 2: サーバーサイド アップロードAPIの実装
 画像・動画を受け取り、ハッシュ化して保存する処理を作ります。
-- [ ] `Server/src/Uploader.php` を作成し、ファイル受け取りとバリデーション（拡張子・MIMEチェック）処理を実装する。
-- [ ] `Uploader.php` にて、SHA-256を用いたファイル名のハッシュ化処理を実装する。
-- [ ] `Uploader.php` にて、ファイルの保存処理とSQLiteへのレコード追加処理を実装する。
-- [ ] `Server/public/api/upload.php` を作成し、POSTリクエストを受け付けてJSONレスポンス（成功/失敗、URL）を返すエンドポイントを実装する。
+- [x] `Server/src/Uploader.php` を作成し、ファイル受け取りとバリデーション（拡張子・MIMEチェック）処理を実装する。（`finfo`による実体MIME検証、拡張子はクライアント申告を信用せずMIMEから決定）
+- [x] `Uploader.php` にて、SHA-256を用いたファイル名のハッシュ化処理を実装する。
+- [x] `Uploader.php` にて、ファイルの保存処理とSQLiteへのレコード追加処理を実装する。（同一hashが既存の場合は保存・INSERTをスキップし重複防止）
+- [x] `Server/public/api/upload.php` を作成し、POSTリクエストを受け付けてJSONレスポンス（成功/失敗、URL）を返すエンドポイントを実装する。
 
 ## Phase 3: サーバーサイド ビューアーとルーティング設定
 OGP対応のHTMLを返し、SNS等で展開されるようにします。
