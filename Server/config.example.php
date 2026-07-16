@@ -13,4 +13,10 @@ return [
     // アップロードを許可する最大サイズ（バイト）。
     // ※ php.ini の upload_max_filesize / post_max_size もこの値以上に設定すること。
     'max_file_size' => 30 * 1024 * 1024,
+
+    // ギャラリー（一覧取得・削除API）へのアクセスに必要なパスワードのハッシュ値。
+    // 平文パスワードは保存しない。以下のコマンドで生成した値を設定すること。
+    //   php -r "echo password_hash('好きなパスワード', PASSWORD_DEFAULT), \"\n\";"
+    // 空文字のままだとログインは常に失敗する（未設定時に誰でも入れてしまう事故を防ぐため）。
+    'gallery_password_hash' => '',
 ];

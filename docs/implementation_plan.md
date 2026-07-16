@@ -33,8 +33,9 @@ OGP対応のHTMLを返し、SNS等で展開されるようにします。
 
 ## Phase 4: Webギャラリー機能（サーバー・フロント統合）
 アップロード済み画像を管理・閲覧する超高速なギャラリーを作ります。
-- [ ] ギャラリー用のAPI（一覧取得用）：SQLiteからページネーション（LIMIT/OFFSET等）付きで画像リストを返すPHP処理を作成する。各アイテムのURLは4章のレスポンス仕様と同じ規則（画像＝拡張子付き直リンク、動画＝拡張子なしビューアーリンク）で組み立てること。
-- [ ] ギャラリー用のAPI（削除用）：SQLiteのレコード物理削除および実ファイルを削除するPHP処理を作成する。
+- [x] ギャラリー機能全体に簡易パスワード認証を追加する（設計書に記載がなかったため協議の上決定。`Server/src/Auth.php`、`Server/public/api/login.php`、PHPセッションで一覧・削除APIを保護）。
+- [x] ギャラリー用のAPI（一覧取得用）：SQLiteからページネーション（LIMIT/OFFSET等）付きで画像リストを返すPHP処理を作成する。各アイテムのURLは4章のレスポンス仕様と同じ規則（画像＝拡張子付き直リンク、動画＝拡張子なしビューアーリンク）で組み立てること。（`Server/src/Gallery.php` + `Server/public/api/gallery.php` GET）
+- [x] ギャラリー用のAPI（削除用）：SQLiteのレコード物理削除および実ファイルを削除するPHP処理を作成する。（`Gallery::delete()` + `gallery.php` DELETE）
 - [ ] `Server/public/gallery/index.html` および `style.css` を作成し、ダークモード基調のCSS Gridカードレイアウトを構築する。
 - [ ] ピュアVanilla JSで、APIからデータを取得しDOMにレンダリングする処理を実装する。
 - [ ] JSで、IntersectionObserverを用いた「無限スクロール」による追加読み込み処理を実装する。

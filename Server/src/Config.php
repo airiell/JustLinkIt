@@ -9,6 +9,7 @@ final class Config
     private const DEFAULTS = [
         'upload_dir' => 'u',
         'max_file_size' => 30 * 1024 * 1024,
+        'gallery_password_hash' => '',
     ];
 
     /** @var array<string, mixed> */
@@ -49,5 +50,10 @@ final class Config
     public function databasePath(): string
     {
         return (string) ($this->values['database_path'] ?? dirname(__DIR__) . '/data/gallery.sqlite3');
+    }
+
+    public function galleryPasswordHash(): string
+    {
+        return (string) $this->values['gallery_password_hash'];
     }
 }
