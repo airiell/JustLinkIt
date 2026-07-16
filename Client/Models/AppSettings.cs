@@ -17,6 +17,12 @@ public class AppSettings
     // アップロード完了後、PC内の元ファイルを削除するか（§3.1）。
     public bool DeleteLocalFileAfterUpload { get; set; }
 
+    // Snipping Toolの保存先フォルダ（監視対象）。設計書に明記はないが、
+    // ユーザー環境で変更されている可能性があるため設定可能にする。
+    // 既定値はWindows 11のSnipping Tool自動保存の既定フォルダ。
+    public string WatchFolderPath { get; set; } =
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "Screenshots");
+
     public static async Task<AppSettings> LoadAsync()
     {
         if (!File.Exists(SettingsFilePath))
