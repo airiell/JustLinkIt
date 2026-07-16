@@ -27,11 +27,11 @@ JustLinkIt/
     ├── public/
     │   ├── api/
     │   │   └── upload.php (アップロード受付API)
-    │   └── u/             (生成されたURLへのアクセス用ルーティング)
+    │   └── u/             (アップロード実ファイルの保存先。画像は直リンクとして静的配信される)
     ├── src/
     │   ├── Uploader.php   (保存・ハッシュ化処理)
-    │   └── Viewer.php     (OGPタグ付きHTML生成ロジック)
-    └── .htaccess          (URLルーティング)
+    │   └── Viewer.php     (OGPタグ付きHTML生成ロジック。動画専用)
+    └── .htaccess          (URLルーティング。実ファイルが存在しない拡張子なしアクセス＝動画のみをViewer.phpへ)
 ```
 
 ## 3. 追加仕様・決定事項
