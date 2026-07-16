@@ -1,0 +1,2 @@
+# .batファイルはCRLF必須（LFのみだとcmd.exeが日本語混じりの行を誤ってパースする）。
+*.bat text eol=crlf

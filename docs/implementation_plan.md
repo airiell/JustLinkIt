@@ -68,6 +68,6 @@ Windows用常駐アプリのプロジェクト初期化を行います。
 
 ## Phase 8: 仕上げ・デプロイ準備
 配布・アンインストールを容易にするための最終調整です。
-- [ ] `Client/uninstall.bat` を作成し、SendToショートカットや設定ファイルを安全に削除する処理を実装する。
-- [ ] C#アプリの実行ファイルを単一ファイル（Single File）としてビルドするためのプロジェクト設定を行う。
-- [ ] 全体の動作確認テスト（監視、アップロード、表示、ギャラリーからの削除）を実施する。
+- [x] `Client/uninstall.bat` を作成し、SendToショートカットや設定ファイルを安全に削除する処理を実装する。（確認プロンプト付き。実行中プロセスの終了→SendToショートカット削除→settings.json削除の順。検証中、LF改行+日本語混在でcmd.exeが誤パースするバグを発見しCRLF化＋`.gitattributes`で`*.bat`をCRLF固定して解消）
+- [x] C#アプリの実行ファイルを単一ファイル（Single File）としてビルドするためのプロジェクト設定を行う。（`Client/Properties/PublishProfiles/FolderProfile.pubxml`。Framework-dependent（ランタイム非同梱）+ Single File、`win-x64`。実際に`dotnet publish`し、単一exe(約976KB)が生成され正常起動することを確認済み）
+- [x] 全体の動作確認テスト（監視、アップロード、表示、ギャラリーからの削除）を実施する。（publish済みexeを隔離された監視フォルダ・設定で実際に起動し、テスト画像投下→自動検知→アップロード→サーバーDB/実ファイル生成→ギャラリーAPIでの一覧表示→削除までEnd-to-Endで確認済み）
