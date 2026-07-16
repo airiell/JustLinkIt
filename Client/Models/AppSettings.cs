@@ -23,6 +23,10 @@ public class AppSettings
     public string WatchFolderPath { get; set; } =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "Screenshots");
 
+    // 「送る」メニューへの登録可否を初回起動時に確認したかどうか（§3.4）。
+    // 一度尋ねたら次回以降は再確認しない。
+    public bool HasPromptedSendToRegistration { get; set; }
+
     public static async Task<AppSettings> LoadAsync()
     {
         if (!File.Exists(SettingsFilePath))

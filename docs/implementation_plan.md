@@ -63,8 +63,8 @@ Windows用常駐アプリのプロジェクト初期化を行います。
 - [x] `Views/TrayIcon.xaml` 等を作成し、タスクトレイへの常駐アイコンと右クリックメニューを実装する。（協議の上H.NotifyIcon.Wpfを採用。`TaskbarIcon`をルート要素とし、`App.xaml`は`ShutdownMode=OnExplicitShutdown`+`StartupUri`削除でウィンドウ非表示のまま常駐する構成に変更）
 - [x] トレイメニューから「手動アップロード（ファイル選択 / クリップボード）」を実行するイベント処理を紐付ける。（ファイル選択は`OpenFileDialog`をコード behind から呼び出し、選択後の処理はViewModelのメソッドに委譲）
 - [x] 設定項目を変更・保存するUIを実装する。（協議の上、専用の設定画面(`MainWindow.xaml`)は作らず、トレイメニューから直接変更する方式に変更。`MainWindow.xaml`は削除。ON/OFFはチェック可能なメニュー項目、監視フォルダは`OpenFolderDialog`、サーバーURLは`Microsoft.VisualBasic.Interaction.InputBox`。変更と同時に`MainViewModel.SaveSettingsAsync()`で即時保存）
-- [ ] 初回起動時に「送る(SendTo)」メニューへショートカットを追加するか確認するダイアログ処理を実装する。
-- [ ] コマンドライン引数からファイルパスを受け取り、直接アップロードする機能（送るメニュー連携用）を実装する。
+- [x] 初回起動時に「送る(SendTo)」メニューへショートカットを追加するか確認するダイアログ処理を実装する。（`Models/SendToRegistrar.cs`、`WScript.Shell`のCOM遅延バインディングで.lnk作成。確認要否は`AppSettings.HasPromptedSendToRegistration`で一度きりに制御）
+- [x] コマンドライン引数からファイルパスを受け取り、直接アップロードする機能（送るメニュー連携用）を実装する。（協議の上、単一インスタンス化＋名前付きパイプで実装。`Models/SingleInstanceManager.cs`。既に起動中なら新規プロセスはファイルパスを引き渡して即終了、未起動ならそのまま常駐開始しつつアップロードする）
 
 ## Phase 8: 仕上げ・デプロイ準備
 配布・アンインストールを容易にするための最終調整です。
