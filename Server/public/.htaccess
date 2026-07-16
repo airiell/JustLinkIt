@@ -13,6 +13,12 @@
 
 RewriteEngine On
 
+# mod_php/php-fpm + リバースプロキシ構成のホスト（例: XServer）では、Authorizationヘッダーが
+# PHPまで転送されずに欠落することがある（$_SERVERにもgetallheaders()にも現れない）。
+# upload_api_key認証（api/upload.php）が機能するために、環境変数経由で明示的に転送する。
+RewriteCond %{HTTP:Authorization} .
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
 # 既に実ファイルが存在するリクエスト（例: /u/{hash}.png の画像直リンク）はそのまま静的配信する。
 RewriteCond %{REQUEST_FILENAME} !-f
 
