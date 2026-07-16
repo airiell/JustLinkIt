@@ -47,6 +47,9 @@ public partial class App : Application
         };
         _trayIcon.ForceCreate();
 
+        _mainViewModel.UploadFailed += (_, message) =>
+            _trayIcon.ShowNotification("JustLinkIt", message, H.NotifyIcon.Core.NotificationIcon.Error);
+
         if (filePathArg is not null)
         {
             await _mainViewModel.UploadFileAsync(filePathArg);

@@ -63,6 +63,25 @@ public partial class TrayIcon : TaskbarIcon
         }
     }
 
+    private async void ChangeWatchFolderVideo_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainViewModel viewModel)
+        {
+            return;
+        }
+
+        var dialog = new OpenFolderDialog
+        {
+            InitialDirectory = viewModel.Settings.WatchFolderPathVideo,
+        };
+
+        if (dialog.ShowDialog() == true && dialog.FolderName is not null)
+        {
+            viewModel.Settings.WatchFolderPathVideo = dialog.FolderName;
+            await viewModel.SaveSettingsAsync();
+        }
+    }
+
     private async void ChangeServerUrl_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is not MainViewModel viewModel)

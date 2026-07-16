@@ -11,7 +11,10 @@ public partial class MainViewModel : ObservableObject
 {
     private readonly ApiClient _apiClient = new();
     private readonly ClipboardManager _clipboardManager = new();
-    private readonly FileWatcherService _fileWatcherService = new();
+    // Snipping Toolは画像（スクリーンショット）と動画（画面録画）を別フォルダに保存するため、
+    // フォルダごとに独立したウォッチャーで監視する。
+    private readonly FileWatcherService _imageWatcher = new();
+    private readonly FileWatcherService _videoWatcher = new();
 
     [ObservableProperty]
     private AppSettings _settings = new();
@@ -19,9 +22,14 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private string _statusMessage = string.Empty;
 
+    // アップロード失敗をトレイのバルーン通知として即時に気づけるようにするためのイベント。
+    // ViewModelはH.NotifyIcon等のView固有APIを知らないため、通知の実際の表示はView(TrayIcon)側で行う。
+    public event EventHandler<string>? UploadFailed;
+
     public MainViewModel()
     {
-        _fileWatcherService.FileDetected += OnFileDetected;
+        _imageWatcher.FileDetected += OnFileDetected;
+        _videoWatcher.FileDetected += OnFileDetected;
     }
 
     public async Task InitializeAsync()
@@ -32,11 +40,17 @@ public partial class MainViewModel : ObservableObject
 
     public void RestartWatching()
     {
-        _fileWatcherService.Stop();
+        _imageWatcher.Stop();
+        _videoWatcher.Stop();
 
         if (!string.IsNullOrWhiteSpace(Settings.WatchFolderPath))
         {
-            _fileWatcherService.Start(Settings.WatchFolderPath);
+            _imageWatcher.Start(Settings.WatchFolderPath);
+        }
+
+        if (!string.IsNullOrWhiteSpace(Settings.WatchFolderPathVideo))
+        {
+            _videoWatcher.Start(Settings.WatchFolderPathVideo);
         }
     }
 
@@ -49,11 +63,16 @@ public partial class MainViewModel : ObservableObject
         RestartWatching();
     }
 
-    public async Task UploadFileAsync(string filePath)
+    // allowDeleteAfterUpload: Settings.DeleteLocalFileAfterUpload を実際に適用してよいか。
+    // 監視フォルダでの自動検知（ユーザーが所有を意識しない一時的なスクショ）のみtrueにする。
+    // 「送る」・ファイル選択でユーザーが明示的に選んだ既存ファイルは、設定がONでも
+    // 勝手に削除しない（意図しないデータロスを避けるため）。
+    public async Task UploadFileAsync(string filePath, bool allowDeleteAfterUpload = false)
     {
         if (string.IsNullOrWhiteSpace(Settings.ServerUploadUrl))
         {
             StatusMessage = "アップロード先サーバーが設定されていません。";
+            UploadFailed?.Invoke(this, StatusMessage);
             return;
         }
 
@@ -64,6 +83,7 @@ public partial class MainViewModel : ObservableObject
         if (!result.Success || result.Url is null)
         {
             StatusMessage = $"アップロードに失敗しました: {result.Message}";
+            UploadFailed?.Invoke(this, $"{Path.GetFileName(filePath)} のアップロードに失敗しました。\n{result.Message}");
             return;
         }
 
@@ -75,7 +95,7 @@ public partial class MainViewModel : ObservableObject
             OpenInBrowser(result.Url);
         }
 
-        if (Settings.DeleteLocalFileAfterUpload)
+        if (allowDeleteAfterUpload && Settings.DeleteLocalFileAfterUpload)
         {
             TryDeleteFile(filePath);
         }
@@ -88,22 +108,32 @@ public partial class MainViewModel : ObservableObject
         if (tempFilePath is null)
         {
             StatusMessage = "クリップボードに画像がありません。";
+            UploadFailed?.Invoke(this, StatusMessage);
             return;
         }
 
-        await UploadFileAsync(tempFilePath);
+        try
+        {
+            // アップロード専用に作った一時ファイルなので、設定に関わらず必ず後始末する。
+            await UploadFileAsync(tempFilePath);
+        }
+        finally
+        {
+            TryDeleteFile(tempFilePath);
+        }
     }
 
     [RelayCommand]
     private void Exit()
     {
-        _fileWatcherService.Dispose();
+        _imageWatcher.Dispose();
+        _videoWatcher.Dispose();
         System.Windows.Application.Current.Shutdown();
     }
 
     private async void OnFileDetected(object? sender, WatchedFileDetectedEventArgs e)
     {
-        await UploadFileAsync(e.FilePath);
+        await UploadFileAsync(e.FilePath, allowDeleteAfterUpload: true);
     }
 
     private static void OpenInBrowser(string url)

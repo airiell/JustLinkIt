@@ -491,3 +491,7 @@ Server/data/*.sqlite3
 
 # JustLinkIt サーバー: 環境ごとのローカル設定（config.example.php からコピーして作成）
 Server/config.php
+
+# JustLinkIt サーバー: 実際にアップロードされたファイル本体（ランタイム生成物）
+Server/public/u/*
+!Server/public/u/.gitkeep

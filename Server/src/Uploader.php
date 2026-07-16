@@ -90,7 +90,10 @@ final class Uploader
         }
 
         $size = (int) ($file['size'] ?? 0);
-        if ($size <= 0 || $size > $this->config->maxFileSize()) {
+        if ($size <= 0) {
+            return $this->failure('ファイルが空か、読み取りに失敗しました。', 400);
+        }
+        if ($size > $this->config->maxFileSize()) {
             return $this->failure('ファイルサイズが上限を超えています。', 413);
         }
 

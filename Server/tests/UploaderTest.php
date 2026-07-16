@@ -166,6 +166,30 @@ return function (TestRunner $runner): void {
         ($ctx['cleanup'])();
     });
 
+    $runner->test('handleUpload() rejects a zero-byte file with a distinct message from size-limit', function (TestRunner $t): void {
+        $ctx = makeUploaderTestContext();
+        $png = base64_decode(TEST_PNG_BASE64);
+        $srcPath = writeUploaderTestFile($png);
+
+        $result = $ctx['uploader']->handleUpload([
+            'name' => 'screenshot.png',
+            'type' => 'image/png',
+            'tmp_name' => $srcPath,
+            'error' => UPLOAD_ERR_OK,
+            'size' => 0,
+        ]);
+
+        $t->assertSame(false, $result['success'] ?? null);
+        $t->assertSame(400, $result['code'] ?? null);
+        $t->assertTrue(
+            !str_contains($result['message'] ?? '', '上限'),
+            'zero-size message must not claim the file exceeds the limit'
+        );
+
+        @unlink($srcPath);
+        ($ctx['cleanup'])();
+    });
+
     $runner->test('handleUpload() rejects a PHP upload error code', function (TestRunner $t): void {
         $ctx = makeUploaderTestContext();
 

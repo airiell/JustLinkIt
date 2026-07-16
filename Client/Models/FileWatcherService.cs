@@ -36,9 +36,15 @@ public class FileWatcherService : IDisposable
         _watcher = new FileSystemWatcher(folderPath)
         {
             NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite,
+            InternalBufferSize = 65536,
             EnableRaisingEvents = true,
         };
-        _watcher.Created += OnCreated;
+        _watcher.Created += OnFileEvent;
+        // 多くのキャプチャツールは一時ファイル名で書き込み、完了後に最終ファイル名へ
+        // リネームする。リネームはCreatedを発火させずRenamedのみが発火するため、
+        // こちらも購読しないと「たまにアップロードされない」事象が起きる。
+        _watcher.Renamed += OnFileEvent;
+        _watcher.Error += OnError;
     }
 
     public void Stop()
@@ -48,12 +54,24 @@ public class FileWatcherService : IDisposable
             return;
         }
 
-        _watcher.Created -= OnCreated;
+        _watcher.Created -= OnFileEvent;
+        _watcher.Renamed -= OnFileEvent;
+        _watcher.Error -= OnError;
         _watcher.Dispose();
         _watcher = null;
     }
 
-    private async void OnCreated(object sender, FileSystemEventArgs e)
+    private void OnError(object sender, ErrorEventArgs e)
+    {
+        // 短時間に大量のイベントが発生しバッファが溢れた場合など。
+        // 監視自体を再開させることで復旧を試みる。
+        if (_watcher is not null)
+        {
+            Start(_watcher.Path);
+        }
+    }
+
+    private async void OnFileEvent(object sender, FileSystemEventArgs e)
     {
         try
         {
@@ -98,19 +116,36 @@ public class FileWatcherService : IDisposable
         return null;
     }
 
-    private static async Task<bool> WaitUntilFileIsReadyAsync(string filePath, int maxAttempts = 10, int delayMs = 200)
+    // 排他オープンできるだけでは「書き込み完了」の証明にならない（例: 保存元アプリが
+    // ファイルを作成した直後、内容を書き込む前の一瞬だけロックが外れているケースがあり、
+    // そのタイミングで0バイトのまま「準備完了」と判定してしまう不具合があった）。
+    // そのため、サイズが非ゼロかつ前回チェック時から変化していない（＝書き込みが
+    // 落ち着いた）ことも合わせて確認する。
+    private static async Task<bool> WaitUntilFileIsReadyAsync(string filePath, int maxAttempts = 15, int delayMs = 200)
     {
+        long previousSize = -1;
+
         for (var attempt = 0; attempt < maxAttempts; attempt++)
         {
             try
             {
+                var currentSize = new FileInfo(filePath).Length;
+
                 await using var stream = File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.None);
-                return true;
+
+                if (currentSize > 0 && currentSize == previousSize)
+                {
+                    return true;
+                }
+
+                previousSize = currentSize;
             }
             catch (IOException)
             {
-                await Task.Delay(delayMs);
+                // ロック中。次のリトライへ。
             }
+
+            await Task.Delay(delayMs);
         }
 
         return false;

@@ -17,11 +17,17 @@ public class AppSettings
     // アップロード完了後、PC内の元ファイルを削除するか（§3.1）。
     public bool DeleteLocalFileAfterUpload { get; set; }
 
-    // Snipping Toolの保存先フォルダ（監視対象）。設計書に明記はないが、
+    // Snipping Toolのスクリーンショット保存先フォルダ（監視対象）。設計書に明記はないが、
     // ユーザー環境で変更されている可能性があるため設定可能にする。
     // 既定値はWindows 11のSnipping Tool自動保存の既定フォルダ。
     public string WatchFolderPath { get; set; } =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "Screenshots");
+
+    // Snipping Toolの画面録画（動画）保存先フォルダ。画像とは別フォルダに保存されるため独立して監視する。
+    // フォルダ名はWindowsの表示言語によってローカライズされる（例: 日本語版では「画面録画」）ため
+    // 既定値はあくまで目安。初回起動後、トレイメニューから実際の環境に合わせて変更すること。
+    public string WatchFolderPathVideo { get; set; } =
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), "Screen Recordings");
 
     // 「送る」メニューへの登録可否を初回起動時に確認したかどうか（§3.4）。
     // 一度尋ねたら次回以降は再確認しない。
