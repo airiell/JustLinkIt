@@ -16,5 +16,8 @@ RewriteEngine On
 # 既に実ファイルが存在するリクエスト（例: /u/{hash}.png の画像直リンク）はそのまま静的配信する。
 RewriteCond %{REQUEST_FILENAME} !-f
 
-# 拡張子なしの /u/{64桁ハッシュ値}（動画のみ）を viewer.php にルーティングする。
-RewriteRule ^u/([0-9a-f]{64})$ viewer.php?hash=$1 [L,QSA]
+# 拡張子なしの /{アップロードディレクトリ}/{64桁ハッシュ値}（動画のみ）を viewer.php にルーティングする。
+# ディレクトリ名は config.php の upload_dir に依存するためハードコードせず、
+# 「1階層のディレクトリ名 + 64桁16進数ハッシュ」というパターンのみで判定する
+# （ハッシュ値そのものが十分な長さのランダム性を持つため、これが安全性の境界となる）。
+RewriteRule ^[^/]+/([0-9a-f]{64})$ viewer.php?hash=$1 [L,QSA]
