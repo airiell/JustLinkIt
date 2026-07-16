@@ -9,6 +9,12 @@ namespace JustLinkIt.Client.ViewModels;
 
 public partial class MainViewModel : ObservableObject
 {
+    // Altキー押下時にアップロードをキャンセルする判定用（FileSystemWatcherのスレッドから
+    // 呼ばれるため、WPFのKeyboard.Modifiersではなく物理キー状態を直接見るこちらを使う）。
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern short GetAsyncKeyState(int vKey);
+    private const int VK_MENU = 0x12; // Altキー
+
     private readonly ApiClient _apiClient = new();
     private readonly ClipboardManager _clipboardManager = new();
     // Snipping Toolは画像（スクリーンショット）と動画（画面録画）を別フォルダに保存するため、
@@ -133,6 +139,12 @@ public partial class MainViewModel : ObservableObject
 
     private async void OnFileDetected(object? sender, WatchedFileDetectedEventArgs e)
     {
+        if ((GetAsyncKeyState(VK_MENU) & 0x8000) != 0)
+        {
+            StatusMessage = "アップロードをキャンセルしました (Altキー)";
+            return;
+        }
+
         await UploadFileAsync(e.FilePath, allowDeleteAfterUpload: true);
     }
 
