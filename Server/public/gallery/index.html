@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JustLinkIt Gallery</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="app-header">
+  <h1>JustLinkIt</h1>
+</header>
+
+<main>
+  <div id="filter-bar" class="filter-bar" hidden>
+    🏷️ 絞り込み中: <span id="current-filter-tag"></span>
+    <button type="button" id="clear-filter" class="clear-filter" aria-label="絞り込みを解除">&times; 解除</button>
+  </div>
+  <div id="grid" class="grid"></div>
+  <p id="empty-message" class="empty-message" hidden>アップロードされたファイルはまだありません。</p>
+  <p id="loading-message" class="loading-message">読み込み中...</p>
+  <div id="sentinel" class="sentinel"></div>
+</main>
+
+<dialog id="login-dialog">
+  <form id="login-form" method="dialog">
+    <h2>パスワードを入力してください</h2>
+    <input type="password" id="login-password" name="password" autocomplete="current-password" required>
+    <p id="login-error" class="error-message" hidden></p>
+    <button type="submit">ログイン</button>
+  </form>
+</dialog>
+
+<dialog id="viewer-dialog">
+  <div class="viewer-wrapper">
+    <button type="button" id="viewer-close" class="viewer-close" aria-label="閉じる">&times; 閉じる</button>
+    <div class="viewer-nav-zone viewer-prev-zone">
+      <button type="button" id="viewer-prev" class="viewer-nav-arrow" aria-label="前へ">&lsaquo;</button>
+    </div>
+    <div class="viewer-nav-zone viewer-next-zone">
+      <button type="button" id="viewer-next" class="viewer-nav-arrow" aria-label="次へ">&rsaquo;</button>
+    </div>
+    <div id="viewer-media" class="viewer-media"></div>
+    <div id="viewer-date" class="viewer-date"></div>
+    <div id="viewer-tag-list" class="viewer-tag-list"></div>
+    <a id="viewer-download" class="viewer-download" download aria-label="ダウンロード">⬇ ダウンロード</a>
+    <button type="button" id="viewer-delete" class="viewer-delete">削除</button>
+  </div>
+</dialog>
+
+<div id="tag-popover" class="tag-popover" hidden>
+  <div id="tag-popover-list" class="tag-popover-list"></div>
+  <form id="tag-popover-form" class="tag-popover-form">
+    <input type="text" id="tag-popover-input" placeholder="タグを追加..." maxlength="50" autocomplete="off">
+  </form>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
