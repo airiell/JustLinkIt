@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using JustLinkIt.Client.Models;
@@ -42,6 +43,7 @@ public partial class MainViewModel : ObservableObject
     {
         Settings = await AppSettings.LoadAsync();
         RestartWatching();
+        Logger.Log("アプリケーションを初期化しました。");
     }
 
     public void RestartWatching()
@@ -52,11 +54,13 @@ public partial class MainViewModel : ObservableObject
         if (!string.IsNullOrWhiteSpace(Settings.WatchFolderPath))
         {
             _imageWatcher.Start(Settings.WatchFolderPath);
+            Logger.Log($"画像の監視を開始しました: {Settings.WatchFolderPath}");
         }
 
         if (!string.IsNullOrWhiteSpace(Settings.WatchFolderPathVideo))
         {
             _videoWatcher.Start(Settings.WatchFolderPathVideo);
+            Logger.Log($"動画の監視を開始しました: {Settings.WatchFolderPathVideo}");
         }
     }
 
@@ -67,6 +71,31 @@ public partial class MainViewModel : ObservableObject
     {
         await Settings.SaveAsync();
         RestartWatching();
+        ApplyStartupRegistration();
+    }
+
+    // トグルの度に無条件でCOM経由のショートカット作成/削除を行うと無駄なため、
+    // 現在の登録状態と設定値が一致しない場合のみ反映する。
+    private void ApplyStartupRegistration()
+    {
+        try
+        {
+            if (Settings.RunOnStartup && !StartupRegistrar.IsRegistered())
+            {
+                StartupRegistrar.Register();
+                Logger.Log("スタートアップへの登録を行いました。");
+            }
+            else if (!Settings.RunOnStartup && StartupRegistrar.IsRegistered())
+            {
+                StartupRegistrar.Unregister();
+                Logger.Log("スタートアップ登録を解除しました。");
+            }
+        }
+        catch (Exception ex) when (ex is COMException or UnauthorizedAccessException or IOException)
+        {
+            Logger.Log("スタートアップ登録の更新に失敗しました。", ex);
+            StatusMessage = "スタートアップ登録の更新に失敗しました。";
+        }
     }
 
     // allowDeleteAfterUpload: Settings.DeleteLocalFileAfterUpload を実際に適用してよいか。
@@ -84,17 +113,19 @@ public partial class MainViewModel : ObservableObject
 
         StatusMessage = $"アップロード中: {Path.GetFileName(filePath)}";
 
-        var result = await _apiClient.UploadAsync(filePath, Settings.ServerUploadUrl);
+        var result = await _apiClient.UploadAsync(filePath, Settings.ServerUploadUrl, Settings.UploadApiKey);
 
         if (!result.Success || result.Url is null)
         {
             StatusMessage = $"アップロードに失敗しました: {result.Message}";
+            Logger.Log($"アップロード失敗: {filePath} ({result.Message})");
             UploadFailed?.Invoke(this, $"{Path.GetFileName(filePath)} のアップロードに失敗しました。\n{result.Message}");
             return;
         }
 
         await _clipboardManager.CopyUrlToClipboardAsync(result.Url);
         StatusMessage = $"アップロード完了: {result.Url}";
+        Logger.Log($"アップロード成功: {filePath} -> {result.Url}");
 
         if (Settings.OpenBrowserOnUpload)
         {
@@ -130,6 +161,19 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void OpenGallery()
+    {
+        if (!Uri.TryCreate(Settings.ServerUploadUrl, UriKind.Absolute, out var uploadUri))
+        {
+            StatusMessage = "アップロード先サーバーが設定されていません。";
+            UploadFailed?.Invoke(this, StatusMessage);
+            return;
+        }
+
+        OpenInBrowser($"{uploadUri.Scheme}://{uploadUri.Authority}/gallery/");
+    }
+
+    [RelayCommand]
     private void Exit()
     {
         _imageWatcher.Dispose();
@@ -139,9 +183,12 @@ public partial class MainViewModel : ObservableObject
 
     private async void OnFileDetected(object? sender, WatchedFileDetectedEventArgs e)
     {
+        Logger.Log($"ファイルを検知しました: {e.FilePath} ({e.FileType})");
+
         if ((GetAsyncKeyState(VK_MENU) & 0x8000) != 0)
         {
             StatusMessage = "アップロードをキャンセルしました (Altキー)";
+            Logger.Log($"アップロードをキャンセルしました (Altキー): {e.FilePath}");
             return;
         }
 
@@ -164,9 +211,13 @@ public partial class MainViewModel : ObservableObject
     {
         try
         {
-            File.Delete(filePath);
+            // 誤削除からの復旧余地を残すため、完全削除ではなくゴミ箱への移動にする。
+            Microsoft.VisualBasic.FileIO.FileSystem.DeleteFile(
+                filePath,
+                Microsoft.VisualBasic.FileIO.UIOption.OnlyErrorDialogs,
+                Microsoft.VisualBasic.FileIO.RecycleOption.SendToRecycleBin);
         }
-        catch (IOException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             // 削除に失敗してもアップロード自体は成功しているため握りつぶす。
         }

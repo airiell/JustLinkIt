@@ -19,4 +19,9 @@ return [
     //   php -r "echo password_hash('好きなパスワード', PASSWORD_DEFAULT), \"\n\";"
     // 空文字のままだとログインは常に失敗する（未設定時に誰でも入れてしまう事故を防ぐため）。
     'gallery_password_hash' => '',
+
+    // アップロードAPI（/api/upload.php）を保護するAPIキー。
+    // 空文字の場合は検証をスキップする（従来通り誰でもアップロード可能）。
+    // クライアントは `Authorization: Bearer <このキー>` ヘッダーを送信する必要がある。
+    'upload_api_key' => '',
 ];

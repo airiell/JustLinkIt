@@ -24,4 +24,25 @@ return function (TestRunner $runner): void {
     $runner->test('verifyPassword() rejects when no password hash is configured', function (TestRunner $t): void {
         $t->assertSame(false, Auth::verifyPassword('anything', ''));
     });
+
+    $runner->test('verifyApiKey() accepts a matching Bearer token', function (TestRunner $t): void {
+        $t->assertSame(true, Auth::verifyApiKey('Bearer secret-key', 'secret-key'));
+    });
+
+    $runner->test('verifyApiKey() rejects a non-matching Bearer token', function (TestRunner $t): void {
+        $t->assertSame(false, Auth::verifyApiKey('Bearer wrong-key', 'secret-key'));
+    });
+
+    $runner->test('verifyApiKey() rejects a missing Authorization header', function (TestRunner $t): void {
+        $t->assertSame(false, Auth::verifyApiKey('', 'secret-key'));
+    });
+
+    $runner->test('verifyApiKey() rejects a header without the Bearer scheme', function (TestRunner $t): void {
+        $t->assertSame(false, Auth::verifyApiKey('secret-key', 'secret-key'));
+    });
+
+    $runner->test('verifyApiKey() skips verification when no API key is configured', function (TestRunner $t): void {
+        $t->assertSame(true, Auth::verifyApiKey('', ''));
+        $t->assertSame(true, Auth::verifyApiKey('anything', ''));
+    });
 };

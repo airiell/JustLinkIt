@@ -12,7 +12,7 @@ public class ApiClient
 {
     private static readonly HttpClient HttpClient = new();
 
-    public async Task<UploadResult> UploadAsync(string filePath, string endpointUrl)
+    public async Task<UploadResult> UploadAsync(string filePath, string endpointUrl, string apiKey = "")
     {
         try
         {
@@ -22,7 +22,13 @@ public class ApiClient
             fileContent.Headers.ContentType = new MediaTypeHeaderValue(GetMimeType(filePath));
             content.Add(fileContent, "image", Path.GetFileName(filePath));
 
-            using var response = await HttpClient.PostAsync(endpointUrl, content);
+            using var request = new HttpRequestMessage(HttpMethod.Post, endpointUrl) { Content = content };
+            if (!string.IsNullOrWhiteSpace(apiKey))
+            {
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+            }
+
+            using var response = await HttpClient.SendAsync(request);
             var body = await response.Content.ReadAsStringAsync();
 
             var parsed = JsonSerializer.Deserialize<UploadApiResponse>(body);
@@ -35,6 +41,7 @@ public class ApiClient
         }
         catch (Exception ex) when (ex is HttpRequestException or IOException or TaskCanceledException or JsonException)
         {
+            Logger.Log($"UploadAsync で例外が発生しました: {filePath}", ex);
             return new UploadResult(false, null, $"アップロードに失敗しました: {ex.Message}", null);
         }
     }

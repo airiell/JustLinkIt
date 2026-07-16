@@ -15,6 +15,7 @@ return function (TestRunner $runner): void {
         $t->assertSame('u', $config->uploadDir());
         $t->assertSame(30 * 1024 * 1024, $config->maxFileSize());
         $t->assertSame('', $config->galleryPasswordHash());
+        $t->assertSame('', $config->uploadApiKey());
     });
 
     $runner->test('Config values override defaults', function (TestRunner $t): void {
@@ -24,6 +25,7 @@ return function (TestRunner $runner): void {
             'database_path' => '/tmp/custom.sqlite3',
             'upload_dir_path' => '/tmp/custom-dir',
             'gallery_password_hash' => 'hashed-value',
+            'upload_api_key' => 'api-key-value',
         ]);
 
         $t->assertSame('custom', $config->uploadDir());
@@ -31,6 +33,7 @@ return function (TestRunner $runner): void {
         $t->assertSame('/tmp/custom.sqlite3', $config->databasePath());
         $t->assertSame('/tmp/custom-dir', $config->uploadDirPath());
         $t->assertSame('hashed-value', $config->galleryPasswordHash());
+        $t->assertSame('api-key-value', $config->uploadApiKey());
     });
 
     $runner->test('uploadDirPath() resolves the default upload_dir under Server/public', function (TestRunner $t): void {

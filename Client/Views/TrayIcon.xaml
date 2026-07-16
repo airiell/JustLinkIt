@@ -7,6 +7,7 @@
         <ContextMenu>
             <MenuItem Header="ファイルを選択してアップロード" Click="UploadFile_Click" />
             <MenuItem Header="クリップボードの画像をアップロード" Command="{Binding UploadFromClipboardCommand}" />
+            <MenuItem Header="ギャラリーを開く" Command="{Binding OpenGalleryCommand}" />
             <Separator />
             <MenuItem Header="設定">
                 <MenuItem Header="ブラウザで自動的に開く"
@@ -17,10 +18,15 @@
                           IsCheckable="True"
                           IsChecked="{Binding Settings.DeleteLocalFileAfterUpload, Mode=TwoWay}"
                           Click="SettingToggled_Click" />
+                <MenuItem Header="Windows起動時に自動実行"
+                          IsCheckable="True"
+                          IsChecked="{Binding Settings.RunOnStartup, Mode=TwoWay}"
+                          Click="SettingToggled_Click" />
                 <Separator />
                 <MenuItem Header="画像の監視フォルダを変更..." Click="ChangeWatchFolder_Click" />
                 <MenuItem Header="動画の監視フォルダを変更..." Click="ChangeWatchFolderVideo_Click" />
                 <MenuItem Header="アップロード先URLを設定..." Click="ChangeServerUrl_Click" />
+                <MenuItem Header="APIキーを設定..." Click="ChangeApiKey_Click" />
             </MenuItem>
             <Separator />
             <MenuItem Header="終了" Command="{Binding ExitCommand}" />

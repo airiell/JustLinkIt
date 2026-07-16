@@ -503,3 +503,18 @@ dialog#login-dialog::backdrop {
   border-radius: 20px;
   border: none;
 }
+
+.viewer-download {
+  position: absolute;
+  bottom: 24px;
+  left: 24px;
+  color: white;
+  font-size: 0.875rem;
+  cursor: pointer;
+  z-index: 20;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: none;
+  text-decoration: none;
+}

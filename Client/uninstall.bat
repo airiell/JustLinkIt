@@ -17,10 +17,21 @@ set "SENDTO_SHORTCUT=%APPDATA%\Microsoft\Windows\SendTo\JustLinkIt.lnk"
 if not exist "%SENDTO_SHORTCUT%" goto :no_shortcut
 del /f /q "%SENDTO_SHORTCUT%"
 echo 「送る」メニューのショートカットを削除しました。
-goto :check_settings
+goto :check_startup
 
 :no_shortcut
 echo 「送る」メニューのショートカットは見つかりませんでした。
+
+:check_startup
+REM スタートアップフォルダのショートカットを削除
+set "STARTUP_SHORTCUT=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\JustLinkIt.lnk"
+if not exist "%STARTUP_SHORTCUT%" goto :no_startup_shortcut
+del /f /q "%STARTUP_SHORTCUT%"
+echo スタートアップのショートカットを削除しました。
+goto :check_settings
+
+:no_startup_shortcut
+echo スタートアップのショートカットは見つかりませんでした。
 
 :check_settings
 REM 設定ファイルを削除（このバッチファイルと同じフォルダにある想定）

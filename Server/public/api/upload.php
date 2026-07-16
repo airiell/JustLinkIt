@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace JustLinkIt\Server;
 
+require_once __DIR__ . '/../../src/Auth.php';
 require_once __DIR__ . '/../../src/Config.php';
 require_once __DIR__ . '/../../src/Database.php';
 require_once __DIR__ . '/../../src/Uploader.php';
@@ -17,6 +18,25 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
 }
 
 $config = Config::load();
+
+// mod_php/php-fpm等の構成差により Authorization ヘッダーが $_SERVER に来ないことがあるため、
+// getallheaders() へのフォールバックで確実に取得する。
+$authorizationHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
+if ($authorizationHeader === '' && function_exists('getallheaders')) {
+    foreach (getallheaders() as $name => $value) {
+        if (strcasecmp($name, 'Authorization') === 0) {
+            $authorizationHeader = $value;
+            break;
+        }
+    }
+}
+
+if (!Auth::verifyApiKey($authorizationHeader, $config->uploadApiKey())) {
+    http_response_code(401);
+    echo json_encode(['success' => false, 'message' => 'APIキーが正しくありません。', 'code' => 401]);
+    exit;
+}
+
 $pdo = Database::initialize($config->databasePath());
 $uploader = new Uploader($pdo, $config);
 

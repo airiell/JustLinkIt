@@ -11,6 +11,10 @@ public class AppSettings
     // 設計書(§3.1)には明記されていないが、クライアントが動作するために必須のため追加。
     public string ServerUploadUrl { get; set; } = string.Empty;
 
+    // アップロードAPIの認証キー（サーバー側 config.php の upload_api_key と一致させる）。
+    // 空文字の場合はAuthorizationヘッダーを送信しない（サーバー側が未設定なら検証されない）。
+    public string UploadApiKey { get; set; } = string.Empty;
+
     // アップロード成功時、取得したURLを既定のブラウザで自動的に開くか（§3.1）。
     public bool OpenBrowserOnUpload { get; set; } = true;
 
@@ -32,6 +36,10 @@ public class AppSettings
     // 「送る」メニューへの登録可否を初回起動時に確認したかどうか（§3.4）。
     // 一度尋ねたら次回以降は再確認しない。
     public bool HasPromptedSendToRegistration { get; set; }
+
+    // Windows起動時に自動実行するか。トレイメニューのトグルでON/OFFし、
+    // 実際のスタートアップフォルダへの登録/解除はSaveSettingsAsync()経由で反映される。
+    public bool RunOnStartup { get; set; }
 
     public static async Task<AppSettings> LoadAsync()
     {

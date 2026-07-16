@@ -23,6 +23,7 @@
   const viewerPrev = document.getElementById('viewer-prev');
   const viewerNext = document.getElementById('viewer-next');
   const viewerDelete = document.getElementById('viewer-delete');
+  const viewerDownload = document.getElementById('viewer-download');
 
   const tagPopover = document.getElementById('tag-popover');
   const tagPopoverList = document.getElementById('tag-popover-list');
@@ -267,6 +268,9 @@
 
     viewerDate.textContent = formatDate(item.created_at);
     renderViewerTagChips(item.tags);
+
+    viewerDownload.href = item.file_url;
+    viewerDownload.download = item.file_url.split('/').pop();
   }
 
   function renderViewerTagChips(tags) {
@@ -475,7 +479,7 @@
   // 直接判定する。ラッパーdivのサイズやflexboxのshrink-to-fit挙動のズレに
   // 影響されないようにするため。
   viewerDialog.addEventListener('click', (event) => {
-    if (event.target.closest('.viewer-nav-arrow, .viewer-close, .viewer-delete')) {
+    if (event.target.closest('.viewer-nav-arrow, .viewer-close, .viewer-delete, .viewer-download')) {
       return;
     }
 

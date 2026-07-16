@@ -10,6 +10,7 @@ final class Config
         'upload_dir' => 'u',
         'max_file_size' => 30 * 1024 * 1024,
         'gallery_password_hash' => '',
+        'upload_api_key' => '',
     ];
 
     /** @var array<string, mixed> */
@@ -84,5 +85,10 @@ final class Config
     public function galleryPasswordHash(): string
     {
         return (string) $this->values['gallery_password_hash'];
+    }
+
+    public function uploadApiKey(): string
+    {
+        return (string) $this->values['upload_api_key'];
     }
 }

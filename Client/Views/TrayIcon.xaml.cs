@@ -107,4 +107,26 @@ public partial class TrayIcon : TaskbarIcon
             await viewModel.SaveSettingsAsync();
         }
     }
+
+    private async void ChangeApiKey_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainViewModel viewModel)
+        {
+            return;
+        }
+
+        var dialog = new TextInputDialog(
+            "JustLinkIt 設定",
+            "アップロードAPIキーを入力してください（サーバー側で未設定の場合は空欄のままで構いません）",
+            viewModel.Settings.UploadApiKey)
+        {
+            Owner = OwnerWindow,
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            viewModel.Settings.UploadApiKey = dialog.InputText;
+            await viewModel.SaveSettingsAsync();
+        }
+    }
 }
