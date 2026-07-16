@@ -14,10 +14,31 @@ public partial class App : Application
     private TrayIcon? _trayIcon;
     private MainViewModel? _mainViewModel;
     private SingleInstanceManager? _singleInstance;
+    private Window? _hiddenOwnerWindow;
+
+    // 設定用ダイアログ(OpenFileDialog/OpenFolderDialog)の親として使う、画面には一切表示されない
+    // ウィンドウ。このアプリはMainWindowを持たないトレイオンリー構成のため、親を明示的に渡さないと
+    // ダイアログのオーナー解決がコンテキストメニューの一時的なポップアップに巻き込まれてしまい、
+    // ポップアップが閉じると同時にダイアログも道連れで閉じてしまう(即座に消えるバグの原因だった)。
+    public Window HiddenOwnerWindow => _hiddenOwnerWindow!;
 
     protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        _hiddenOwnerWindow = new Window
+        {
+            WindowStyle = WindowStyle.None,
+            ShowInTaskbar = false,
+            AllowsTransparency = true,
+            Background = null,
+            Width = 0,
+            Height = 0,
+            Left = -10000,
+            Top = -10000,
+            ShowActivated = false,
+        };
+        _hiddenOwnerWindow.Show();
 
         var filePathArg = e.Args.Length > 0 ? e.Args[0] : null;
 
@@ -94,6 +115,7 @@ public partial class App : Application
     {
         _trayIcon?.Dispose();
         _singleInstance?.Dispose();
+        _hiddenOwnerWindow?.Close();
         base.OnExit(e);
     }
 }

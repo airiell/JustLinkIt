@@ -2,7 +2,6 @@ using System.Drawing;
 using System.Windows;
 using H.NotifyIcon;
 using JustLinkIt.Client.ViewModels;
-using Microsoft.VisualBasic;
 using Microsoft.Win32;
 
 namespace JustLinkIt.Client.Views;
@@ -12,6 +11,11 @@ namespace JustLinkIt.Client.Views;
 /// </summary>
 public partial class TrayIcon : TaskbarIcon
 {
+    // このアプリはMainWindowを持たないトレイオンリー構成のため、ダイアログのオーナーを
+    // 明示的に渡さないとコンテキストメニューの一時的なポップアップがオーナーとして解決されてしまい、
+    // ポップアップが閉じると同時にダイアログも道連れで閉じてしまう(App.xaml.cs参照)。
+    private static Window OwnerWindow => ((App)Application.Current).HiddenOwnerWindow;
+
     public TrayIcon()
     {
         InitializeComponent();
@@ -30,7 +34,7 @@ public partial class TrayIcon : TaskbarIcon
             Filter = "画像/動画ファイル|*.png;*.jpg;*.jpeg;*.gif;*.webp;*.mp4",
         };
 
-        if (dialog.ShowDialog() == true)
+        if (dialog.ShowDialog(OwnerWindow) == true)
         {
             await viewModel.UploadFileAsync(dialog.FileName);
         }
@@ -56,7 +60,7 @@ public partial class TrayIcon : TaskbarIcon
             InitialDirectory = viewModel.Settings.WatchFolderPath,
         };
 
-        if (dialog.ShowDialog() == true && dialog.FolderName is not null)
+        if (dialog.ShowDialog(OwnerWindow) == true && dialog.FolderName is not null)
         {
             viewModel.Settings.WatchFolderPath = dialog.FolderName;
             await viewModel.SaveSettingsAsync();
@@ -75,7 +79,7 @@ public partial class TrayIcon : TaskbarIcon
             InitialDirectory = viewModel.Settings.WatchFolderPathVideo,
         };
 
-        if (dialog.ShowDialog() == true && dialog.FolderName is not null)
+        if (dialog.ShowDialog(OwnerWindow) == true && dialog.FolderName is not null)
         {
             viewModel.Settings.WatchFolderPathVideo = dialog.FolderName;
             await viewModel.SaveSettingsAsync();
@@ -89,14 +93,17 @@ public partial class TrayIcon : TaskbarIcon
             return;
         }
 
-        var input = Interaction.InputBox(
-            "アップロード先サーバーのURLを入力してください（例: https://yourdomain.com/api/upload.php）",
+        var dialog = new TextInputDialog(
             "JustLinkIt 設定",
-            viewModel.Settings.ServerUploadUrl);
-
-        if (!string.IsNullOrWhiteSpace(input))
+            "アップロード先サーバーのURLを入力してください（例: https://yourdomain.com/api/upload.php）",
+            viewModel.Settings.ServerUploadUrl)
         {
-            viewModel.Settings.ServerUploadUrl = input;
+            Owner = OwnerWindow,
+        };
+
+        if (dialog.ShowDialog() == true && !string.IsNullOrWhiteSpace(dialog.InputText))
+        {
+            viewModel.Settings.ServerUploadUrl = dialog.InputText;
             await viewModel.SaveSettingsAsync();
         }
     }
