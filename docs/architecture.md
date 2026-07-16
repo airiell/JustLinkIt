@@ -24,14 +24,17 @@ JustLinkIt/
 │           ├── MainWindow.xaml       (非表示・設定用)
 │           └── TrayIcon.xaml
 └── Server/
-    ├── public/
+    ├── public/            (DocumentRoot。src/・data/・tests/・config.phpはこの外側に置き、直接アクセス不可にする)
     │   ├── api/
     │   │   └── upload.php (アップロード受付API)
-    │   └── u/             (アップロード実ファイルの保存先。画像は直リンクとして静的配信される)
+    │   ├── u/             (アップロード実ファイルの保存先。画像は直リンクとして静的配信される)
+    │   ├── viewer.php     (動画用OGPビューアーのHTTPエントリーポイント)
+    │   └── .htaccess      (URLルーティング。実ファイルが存在しない拡張子なしアクセス＝動画のみをviewer.phpへ)
     ├── src/
     │   ├── Uploader.php   (保存・ハッシュ化処理)
     │   └── Viewer.php     (OGPタグ付きHTML生成ロジック。動画専用)
-    └── .htaccess          (URLルーティング。実ファイルが存在しない拡張子なしアクセス＝動画のみをViewer.phpへ)
+    └── data/
+        └── gallery.sqlite3 (DocumentRoot外。直接アクセス不可)
 ```
 
 ## 3. 追加仕様・決定事項

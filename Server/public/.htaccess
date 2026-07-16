@@ -1,0 +1,10 @@
+# JustLinkIt - URLルーティング
+# 前提: このディレクトリ（Server/public/）がWebサーバーのDocumentRootであること。
+
+RewriteEngine On
+
+# 既に実ファイルが存在するリクエスト（例: /u/{hash}.png の画像直リンク）はそのまま静的配信する。
+RewriteCond %{REQUEST_FILENAME} !-f
+
+# 拡張子なしの /u/{64桁ハッシュ値}（動画のみ）を viewer.php にルーティングする。
+RewriteRule ^u/([0-9a-f]{64})$ viewer.php?hash=$1 [L,QSA]

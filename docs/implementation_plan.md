@@ -26,9 +26,10 @@
 ## Phase 3: サーバーサイド ビューアーとルーティング設定
 OGP対応のHTMLを返し、SNS等で展開されるようにします。
 ※ Phase 2.5の仕様確定により、Viewer.phpが呼び出されるのは**動画（mp4）のみ**。画像は直リンク（`/u/{hash}.{ext}`）で完結し、Viewer.phpを経由しない。
-- [ ] `Server/src/Viewer.php` を作成し、ハッシュ値から対象の動画ファイルを特定する処理を実装する。
-- [ ] `Viewer.php` にて、OGPタグ（`og:video` 等、動画向け）を含むビューアーHTMLを動的に生成する処理を実装する。画像用のOGP分岐は不要（Viewer.phpは動画専用のため）。
-- [ ] `Server/.htaccess` を作成し、**実ファイルが存在しない**`/u/{hash}`（拡張子なし＝動画のみ）へのアクセスのみを `Viewer.php` にルーティングする設定を記述する（`RewriteCond %{REQUEST_FILENAME} !-f` 相当の条件が必須）。拡張子付きの `/u/{hash}.{ext}`（画像の直リンク）は通常の静的ファイル配信のままとし、誤ってViewer.php行きにしないこと。
+- [x] `Server/src/Viewer.php` を作成し、ハッシュ値から対象の動画ファイルを特定する処理を実装する。（`Viewer::findByHash()`）
+- [x] `Viewer.php` にて、OGPタグ（`og:video` 等、動画向け）を含むビューアーHTMLを動的に生成する処理を実装する。画像用のOGP分岐は不要（Viewer.phpは動画専用のため）。（`Viewer::renderHtml()`、XSS対策としてHTMLエスケープ済み）
+- [x] `Server/public/viewer.php` を作成し、`.htaccess` からハッシュ値を受け取って `Viewer.php` を呼び出すHTTPエントリーポイントを実装する。（未知/不正なハッシュは404、画像ハッシュが誤って渡された場合は直リンクへ302リダイレクトする防御処理を含む）
+- [x] `Server/public/.htaccess` を作成し、**実ファイルが存在しない**`/u/{hash}`（拡張子なし＝動画のみ）へのアクセスのみを `viewer.php` にルーティングする設定を記述する（`RewriteCond %{REQUEST_FILENAME} !-f` 相当の条件が必須）。拡張子付きの `/u/{hash}.{ext}`（画像の直リンク）は通常の静的ファイル配信のままとし、誤ってviewer.php行きにしないこと。DocumentRootは`Server/public/`とし、`src/`・`data/`・`tests/`・`config.php`はDocumentRoot外に置くことで直接アクセス不可にする。（実際にApache(mod_rewrite)を一時起動して全パターンを検証済み）
 
 ## Phase 4: Webギャラリー機能（サーバー・フロント統合）
 アップロード済み画像を管理・閲覧する超高速なギャラリーを作ります。
