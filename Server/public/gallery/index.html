@@ -13,6 +13,10 @@
 </header>
 
 <main>
+  <div id="filter-bar" class="filter-bar" hidden>
+    🏷️ 絞り込み中: <span id="current-filter-tag"></span>
+    <button type="button" id="clear-filter" class="clear-filter" aria-label="絞り込みを解除">&times; 解除</button>
+  </div>
   <div id="grid" class="grid"></div>
   <p id="empty-message" class="empty-message" hidden>アップロードされたファイルはまだありません。</p>
   <p id="loading-message" class="loading-message">読み込み中...</p>

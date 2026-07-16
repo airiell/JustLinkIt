@@ -72,6 +72,45 @@ main {
   padding: 0 20px 40px;
 }
 
+.filter-bar[hidden] {
+  display: none;
+}
+
+.filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  max-width: 1400px;
+  margin: 0 auto 24px;
+  padding: 10px 20px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  color: var(--text-main);
+  font-size: 0.9rem;
+}
+
+.filter-bar #current-filter-tag {
+  color: var(--accent-color);
+  font-weight: 600;
+}
+
+.clear-filter {
+  background: none;
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  padding: 4px 12px;
+  border-radius: 14px;
+  cursor: pointer;
+}
+
+.clear-filter:hover {
+  color: var(--text-main);
+  border-color: var(--text-muted);
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -136,6 +175,13 @@ main {
   font-size: 0.7rem;
   padding: 2px 8px;
   border-radius: 10px;
+  pointer-events: auto;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.card .card-tag-chip:hover {
+  background-color: rgba(255, 255, 255, 0.3);
 }
 
 .card .video-badge {
@@ -379,6 +425,12 @@ dialog#login-dialog::backdrop {
   padding: 3px 10px;
   border-radius: 12px;
   text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.9);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.viewer-tag-chip-ro:hover {
+  background-color: rgba(255, 255, 255, 0.25);
 }
 
 /* 15%幅のこのゾーンはホバーで矢印を浮かび上がらせるための領域であり、クリック対象ではない

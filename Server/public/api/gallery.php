@@ -38,8 +38,9 @@ if (in_array($method, ['POST', 'DELETE'], true) && ($_SERVER['HTTP_X_REQUESTED_W
 if ($method === 'GET') {
     $limit = (int) ($_GET['limit'] ?? 30);
     $offset = (int) ($_GET['offset'] ?? 0);
+    $tag = trim((string) ($_GET['tag'] ?? ''));
 
-    $result = $gallery->list($limit, $offset);
+    $result = $gallery->list($limit, $offset, $tag === '' ? null : $tag);
     $items = array_map(
         static function (array $item) use ($scheme, $host, $config): array {
             $base = "{$scheme}://{$host}/{$config->uploadDir()}/{$item['hash']}";
@@ -59,7 +60,9 @@ if ($method === 'GET') {
 
 if ($method === 'POST') {
     $hash = (string) ($_GET['hash'] ?? '');
-    if (!preg_match('/^[a-f0-9]{64}$/', $hash)) {
+    // 64桁は本アプリ自身が生成するSHA-256形式。それより短い桁数は、他システムから
+    // 移行した既存データ(例: MD5ベースの32桁ハッシュ)を許容するためのもの。
+    if (!preg_match('/^[a-f0-9]{8,64}$/', $hash)) {
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => '不正なハッシュ値です。', 'code' => 400]);
         exit;
@@ -95,7 +98,9 @@ if ($method === 'DELETE') {
     parse_str(file_get_contents('php://input') ?: '', $body);
     $hash = (string) ($_GET['hash'] ?? $body['hash'] ?? '');
 
-    if (!preg_match('/^[a-f0-9]{64}$/', $hash)) {
+    // 64桁は本アプリ自身が生成するSHA-256形式。それより短い桁数は、他システムから
+    // 移行した既存データ(例: MD5ベースの32桁ハッシュ)を許容するためのもの。
+    if (!preg_match('/^[a-f0-9]{8,64}$/', $hash)) {
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => '不正なハッシュ値です。', 'code' => 400]);
         exit;

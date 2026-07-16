@@ -6,6 +6,10 @@
   const loadingMessage = document.getElementById('loading-message');
   const sentinel = document.getElementById('sentinel');
 
+  const filterBar = document.getElementById('filter-bar');
+  const currentFilterTag = document.getElementById('current-filter-tag');
+  const clearFilterButton = document.getElementById('clear-filter');
+
   const loginDialog = document.getElementById('login-dialog');
   const loginForm = document.getElementById('login-form');
   const loginPassword = document.getElementById('login-password');
@@ -32,6 +36,7 @@
   let currentIndex = -1;
   let observer = null;
   let popoverItem = null;
+  let currentTagFilter = null;
 
   function apiFetch(path, options = {}) {
     return fetch(path, { ...options, credentials: 'same-origin' });
@@ -118,6 +123,11 @@
       const chip = document.createElement('span');
       chip.className = 'card-tag-chip';
       chip.textContent = tag;
+      chip.addEventListener('click', (event) => {
+        // カード全体のクリック(ビューアーを開く動作)を発火させない
+        event.stopPropagation();
+        applyTagFilter(tag);
+      });
       container.appendChild(chip);
     }
   }
@@ -143,7 +153,8 @@
     }
     isLoading = true;
 
-    const response = await apiFetch(`../api/gallery.php?limit=${PAGE_SIZE}&offset=${offset}`);
+    const tagQuery = currentTagFilter ? `&tag=${encodeURIComponent(currentTagFilter)}` : '';
+    const response = await apiFetch(`../api/gallery.php?limit=${PAGE_SIZE}&offset=${offset}${tagQuery}`);
 
     if (response.status === 401) {
       isLoading = false;
@@ -171,6 +182,32 @@
     if (!hasMore && observer) {
       observer.disconnect();
     }
+  }
+
+  function applyTagFilter(tag) {
+    if (viewerDialog.open) {
+      closeViewer();
+    }
+    if (!tagPopover.hidden) {
+      closeTagPopover();
+    }
+
+    currentTagFilter = tag || null;
+    filterBar.hidden = !currentTagFilter;
+    currentFilterTag.textContent = currentTagFilter || '';
+
+    items = [];
+    offset = 0;
+    hasMore = true;
+    grid.innerHTML = '';
+    emptyMessage.hidden = true;
+    loadingMessage.hidden = false;
+    if (observer) {
+      observer.disconnect();
+      observer.observe(sentinel);
+    }
+
+    loadNextPage();
   }
 
   function setupInfiniteScroll() {
@@ -238,6 +275,11 @@
       const chip = document.createElement('span');
       chip.className = 'viewer-tag-chip-ro';
       chip.textContent = tag;
+      chip.addEventListener('click', (event) => {
+        // ダイアログの背景クリック(閉じる動作)を発火させない
+        event.stopPropagation();
+        applyTagFilter(tag);
+      });
       viewerTagList.appendChild(chip);
     }
   }
@@ -403,6 +445,7 @@
   }
 
   loginForm.addEventListener('submit', handleLoginSubmit);
+  clearFilterButton.addEventListener('click', () => applyTagFilter(null));
   tagPopoverForm.addEventListener('submit', (event) => {
     event.preventDefault();
     if (popoverItem) {

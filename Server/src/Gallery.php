@@ -24,14 +24,23 @@ final class Gallery
      *     has_more: bool
      * }
      */
-    public function list(int $limit, int $offset): array
+    public function list(int $limit, int $offset, ?string $tagFilter = null): array
     {
         $limit = max(1, min(100, $limit));
         $offset = max(0, $offset);
 
-        $stmt = $this->pdo->prepare(
-            'SELECT id, hash, extension, mime_type, created_at FROM files ORDER BY id DESC LIMIT :limit OFFSET :offset'
-        );
+        $sql = 'SELECT files.id, files.hash, files.extension, files.mime_type, files.created_at FROM files';
+        if ($tagFilter !== null) {
+            $sql .= ' INNER JOIN file_tags ft ON files.id = ft.file_id
+                      INNER JOIN tags t ON ft.tag_id = t.id
+                      WHERE t.name = :tag';
+        }
+        $sql .= ' ORDER BY files.created_at DESC, files.id DESC LIMIT :limit OFFSET :offset';
+
+        $stmt = $this->pdo->prepare($sql);
+        if ($tagFilter !== null) {
+            $stmt->bindValue(':tag', $tagFilter, PDO::PARAM_STR);
+        }
         $stmt->bindValue(':limit', $limit + 1, PDO::PARAM_INT);
         $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
         $stmt->execute();
