@@ -33,7 +33,10 @@ if ($method === 'GET') {
     $items = array_map(
         static function (array $item) use ($scheme, $host, $config): array {
             $base = "{$scheme}://{$host}/{$config->uploadDir()}/{$item['hash']}";
+            // url: 共有用リンク（動画はOGPビューアーHTMLへのリンクで、動画バイナリではない）
             $item['url'] = $item['is_video'] ? $base : "{$base}.{$item['extension']}";
+            // file_url: 実ファイルへの直リンク（<img>/<video>のsrcなど、実際に描画・再生する用途はこちら）
+            $item['file_url'] = "{$base}.{$item['extension']}";
 
             return $item;
         },

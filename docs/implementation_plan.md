@@ -36,11 +36,11 @@ OGP対応のHTMLを返し、SNS等で展開されるようにします。
 - [x] ギャラリー機能全体に簡易パスワード認証を追加する（設計書に記載がなかったため協議の上決定。`Server/src/Auth.php`、`Server/public/api/login.php`、PHPセッションで一覧・削除APIを保護）。
 - [x] ギャラリー用のAPI（一覧取得用）：SQLiteからページネーション（LIMIT/OFFSET等）付きで画像リストを返すPHP処理を作成する。各アイテムのURLは4章のレスポンス仕様と同じ規則（画像＝拡張子付き直リンク、動画＝拡張子なしビューアーリンク）で組み立てること。（`Server/src/Gallery.php` + `Server/public/api/gallery.php` GET）
 - [x] ギャラリー用のAPI（削除用）：SQLiteのレコード物理削除および実ファイルを削除するPHP処理を作成する。（`Gallery::delete()` + `gallery.php` DELETE）
-- [ ] `Server/public/gallery/index.html` および `style.css` を作成し、ダークモード基調のCSS Gridカードレイアウトを構築する。
-- [ ] ピュアVanilla JSで、APIからデータを取得しDOMにレンダリングする処理を実装する。
-- [ ] JSで、IntersectionObserverを用いた「無限スクロール」による追加読み込み処理を実装する。
-- [ ] ネイティブ `<dialog>` タグを用いた画像クリック時の半透明モーダル表示処理を実装する。
-- [ ] モーダル表示中の、キーボード（左右キー）による画像遷移処理を実装する。
+- [x] `Server/public/gallery/index.html` および `style.css` を作成し、ダークモード基調のCSS Gridカードレイアウトを構築する。ログイン用`<dialog>`も同時に実装。
+- [x] ピュアVanilla JSで、APIからデータを取得しDOMにレンダリングする処理を実装する。（`Server/public/gallery/app.js`）画像/動画の実体表示には`gallery.php`が返す`file_url`（常に拡張子付き直リンク）を使用し、共有用の`url`（動画は拡張子なしビューアーリンク）とは区別すること。
+- [x] JSで、IntersectionObserverを用いた「無限スクロール」による追加読み込み処理を実装する。
+- [x] ネイティブ `<dialog>` タグを用いた画像クリック時の半透明モーダル表示処理を実装する。削除ボタンも同モーダルに実装。
+- [x] モーダル表示中の、キーボード（左右キー）による画像遷移処理を実装する。（Escで閉じる処理も追加）
 
 ## Phase 5: クライアントサイド基盤（C# WPF）
 Windows用常駐アプリのプロジェクト初期化を行います。

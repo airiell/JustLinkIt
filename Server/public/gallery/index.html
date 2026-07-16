@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JustLinkIt Gallery</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="app-header">
+  <h1>JustLinkIt</h1>
+</header>
+
+<main>
+  <div id="grid" class="grid"></div>
+  <p id="empty-message" class="empty-message" hidden>アップロードされたファイルはまだありません。</p>
+  <div id="sentinel" class="sentinel"></div>
+</main>
+
+<dialog id="login-dialog">
+  <form id="login-form" method="dialog">
+    <h2>パスワードを入力してください</h2>
+    <input type="password" id="login-password" name="password" autocomplete="current-password" required>
+    <p id="login-error" class="error-message" hidden></p>
+    <button type="submit">ログイン</button>
+  </form>
+</dialog>
+
+<dialog id="viewer-dialog">
+  <button type="button" id="viewer-close" class="viewer-close" aria-label="閉じる">&times;</button>
+  <button type="button" id="viewer-prev" class="viewer-nav viewer-prev" aria-label="前へ">&lsaquo;</button>
+  <button type="button" id="viewer-next" class="viewer-nav viewer-next" aria-label="次へ">&rsaquo;</button>
+  <div id="viewer-media" class="viewer-media"></div>
+  <button type="button" id="viewer-delete" class="viewer-delete">削除</button>
+</dialog>
+
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,199 @@
+:root {
+  --bg-color: #0a0a0a;
+  --card-bg: #171717;
+  --border-color: #262626;
+  --text-main: #f5f5f5;
+  --text-muted: #a3a3a3;
+  --accent-color: #4f9eff;
+  --danger-color: #ff5252;
+  --overlay-color: rgba(0, 0, 0, 0.85);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  font-family: -apple-system, "Segoe UI", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+}
+
+.app-header {
+  padding: 24px 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+main {
+  padding: 20px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.card {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.card img,
+.card video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.card .video-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background-color: var(--overlay-color);
+  color: var(--text-main);
+  font-size: 0.75rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.empty-message {
+  color: var(--text-muted);
+  text-align: center;
+  padding: 40px 0;
+}
+
+.sentinel {
+  height: 1px;
+}
+
+dialog {
+  background-color: var(--card-bg);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 24px;
+}
+
+dialog::backdrop {
+  background-color: var(--overlay-color);
+}
+
+#login-dialog h2 {
+  margin-top: 0;
+  font-size: 1rem;
+}
+
+#login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 240px;
+}
+
+#login-form input {
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: 1rem;
+}
+
+#login-form button {
+  background-color: var(--accent-color);
+  color: #0a0a0a;
+  border: none;
+  border-radius: 4px;
+  padding: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.error-message {
+  color: var(--danger-color);
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+#viewer-dialog {
+  max-width: 90vw;
+  max-height: 90vh;
+  padding: 0;
+  background: transparent;
+  border: none;
+}
+
+.viewer-media {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-height: 90vh;
+}
+
+.viewer-media img,
+.viewer-media video {
+  max-width: 100%;
+  max-height: 90vh;
+  display: block;
+}
+
+.viewer-close,
+.viewer-nav,
+.viewer-delete {
+  position: fixed;
+  background-color: var(--overlay-color);
+  color: var(--text-main);
+  border: none;
+  cursor: pointer;
+}
+
+.viewer-close {
+  top: 16px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.viewer-nav {
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  font-size: 1.5rem;
+}
+
+.viewer-prev {
+  left: 16px;
+}
+
+.viewer-next {
+  right: 16px;
+}
+
+.viewer-delete {
+  bottom: 16px;
+  right: 16px;
+  padding: 8px 14px;
+  border-radius: 4px;
+  color: var(--danger-color);
+  font-size: 0.875rem;
+}
