@@ -504,6 +504,65 @@ dialog#login-dialog::backdrop {
   border: none;
 }
 
+dialog#delete-confirm-dialog {
+  background-color: var(--card-bg);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 24px;
+}
+
+dialog#delete-confirm-dialog::backdrop {
+  background-color: rgba(0, 0, 0, 0.85);
+}
+
+.confirm-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  min-width: 240px;
+}
+
+.confirm-content p {
+  margin: 0;
+  font-size: 1rem;
+  text-align: center;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.confirm-cancel,
+.confirm-ok {
+  border: none;
+  border-radius: 20px;
+  padding: 8px 20px;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.confirm-cancel {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--text-main);
+}
+
+.confirm-cancel:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.confirm-ok {
+  background-color: var(--danger-color);
+  color: #0a0a0a;
+  font-weight: 600;
+}
+
+.confirm-ok:hover {
+  opacity: 0.85;
+}
+
 .viewer-download {
   position: absolute;
   bottom: 24px;

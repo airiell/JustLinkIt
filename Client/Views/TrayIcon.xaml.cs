@@ -1,4 +1,5 @@
 using System.Drawing;
+using System.Runtime.InteropServices;
 using System.Windows;
 using H.NotifyIcon;
 using JustLinkIt.Client.ViewModels;
@@ -20,6 +21,36 @@ public partial class TrayIcon : TaskbarIcon
     {
         InitializeComponent();
         Icon = SystemIcons.Application;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct Win32Point
+    {
+        public int X;
+        public int Y;
+    }
+
+    [DllImport("user32.dll")]
+    private static extern bool GetCursorPos(out Win32Point point);
+
+    // CenterOwnerではオーナー(HiddenOwnerWindow)が画面外の0x0ウィンドウのため画面中央に
+    // フォールバックしてしまう。トレイメニュー経由で開くダイアログはメニュー操作時の
+    // カーソル位置＝トレイアイコン付近に出したいため、代わりにこちらでカーソル基準に配置する。
+    private static void PositionNearCursor(Window window)
+    {
+        GetCursorPos(out var cursor);
+
+        var source = PresentationSource.FromVisual(OwnerWindow);
+        var cursorPos = source?.CompositionTarget is { } target
+            ? target.TransformFromDevice.Transform(new System.Windows.Point(cursor.X, cursor.Y))
+            : new System.Windows.Point(cursor.X, cursor.Y);
+
+        window.Loaded += (_, _) =>
+        {
+            var workArea = SystemParameters.WorkArea;
+            window.Left = Math.Clamp(cursorPos.X, workArea.Left, Math.Max(workArea.Left, workArea.Right - window.ActualWidth));
+            window.Top = Math.Clamp(cursorPos.Y, workArea.Top, Math.Max(workArea.Top, workArea.Bottom - window.ActualHeight));
+        };
     }
 
     private async void UploadFile_Click(object sender, RoutedEventArgs e)
@@ -100,6 +131,7 @@ public partial class TrayIcon : TaskbarIcon
         {
             Owner = OwnerWindow,
         };
+        PositionNearCursor(dialog);
 
         if (dialog.ShowDialog() == true && !string.IsNullOrWhiteSpace(dialog.InputText))
         {
@@ -122,6 +154,7 @@ public partial class TrayIcon : TaskbarIcon
         {
             Owner = OwnerWindow,
         };
+        PositionNearCursor(dialog);
 
         if (dialog.ShowDialog() == true)
         {

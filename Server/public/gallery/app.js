@@ -25,6 +25,10 @@
   const viewerDelete = document.getElementById('viewer-delete');
   const viewerDownload = document.getElementById('viewer-download');
 
+  const deleteConfirmDialog = document.getElementById('delete-confirm-dialog');
+  const deleteConfirmCancel = document.getElementById('delete-confirm-cancel');
+  const deleteConfirmOk = document.getElementById('delete-confirm-ok');
+
   const tagPopover = document.getElementById('tag-popover');
   const tagPopoverList = document.getElementById('tag-popover-list');
   const tagPopoverForm = document.getElementById('tag-popover-form');
@@ -414,6 +418,19 @@
     currentIndex = -1;
   }
 
+  function openDeleteConfirm() {
+    if (currentIndex < 0) {
+      return;
+    }
+    if (typeof deleteConfirmDialog.showModal === 'function') {
+      deleteConfirmDialog.showModal();
+    }
+  }
+
+  function closeDeleteConfirm() {
+    deleteConfirmDialog.close();
+  }
+
   async function deleteCurrentItem() {
     if (currentIndex < 0) {
       return;
@@ -469,7 +486,18 @@
   viewerClose.addEventListener('click', closeViewer);
   viewerPrev.addEventListener('click', () => showViewerAt(currentIndex - 1));
   viewerNext.addEventListener('click', () => showViewerAt(currentIndex + 1));
-  viewerDelete.addEventListener('click', deleteCurrentItem);
+  viewerDelete.addEventListener('click', openDeleteConfirm);
+  deleteConfirmCancel.addEventListener('click', closeDeleteConfirm);
+  deleteConfirmOk.addEventListener('click', () => {
+    closeDeleteConfirm();
+    deleteCurrentItem();
+  });
+  deleteConfirmDialog.addEventListener('click', (event) => {
+    // 背景（::backdrop相当）クリック時はキャンセル扱いとする
+    if (event.target === deleteConfirmDialog) {
+      closeDeleteConfirm();
+    }
+  });
 
   // アイコン類（前後送りボタン本体・閉じる・削除ボタン）は明示的に除外。
   // ナビゲーションゾーン（ホバー用の15%幅の当たり判定エリア）自体はここでは除外しない。
@@ -502,6 +530,11 @@
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && !tagPopover.hidden) {
       closeTagPopover();
+      return;
+    }
+    if (deleteConfirmDialog.open) {
+      // ネイティブのcancelイベントにより確認ダイアログ自体は閉じるため、
+      // ビューアー側のEscape処理（closeViewer）に流さないようここで止める。
       return;
     }
     if (!viewerDialog.open) {
