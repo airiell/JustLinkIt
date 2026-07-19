@@ -496,3 +496,8 @@ Server/config.php
 Server/public/u/*
 !Server/public/u/.gitkeep
 !Server/public/u/.htaccess
+
+# AIエージェント向けの設定・ルールファイル（ローカルでは使用するが公開リポジトリには含めない）
+/.agents/
+/.claude/
+/CLAUDE.md
