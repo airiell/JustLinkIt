@@ -26,6 +26,10 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+        // Left/TopはWindowStyle.None+0x0サイズで画面には映らないが、実在するモニタの範囲外に
+        // 置くと、WPFがこのウィンドウを暗黙のMainWindow（PlacementTarget省略時のPopupのDPI
+        // 基準）として使うため、トレイの右クリックメニューがマルチモニタ環境で全く関係ない
+        // モニタに表示される不具合の原因になっていた。プライマリモニタ原点に置いて回避する。
         _hiddenOwnerWindow = new Window
         {
             WindowStyle = WindowStyle.None,
@@ -34,8 +38,8 @@ public partial class App : Application
             Background = null,
             Width = 0,
             Height = 0,
-            Left = -10000,
-            Top = -10000,
+            Left = 0,
+            Top = 0,
             ShowActivated = false,
         };
         _hiddenOwnerWindow.Show();
