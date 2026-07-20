@@ -1,6 +1,8 @@
 using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Controls.Primitives;
+using System.Windows.Interop;
 using H.NotifyIcon;
 using JustLinkIt.Client.ViewModels;
 using Microsoft.Win32;
@@ -17,6 +19,14 @@ public partial class TrayIcon : TaskbarIcon
     // ポップアップが閉じると同時にダイアログも道連れで閉じてしまう(App.xaml.cs参照)。
     private static Window OwnerWindow => ((App)Application.Current).HiddenOwnerWindow;
 
+    // H.NotifyIconの既定のメニュー表示(PlacementMode.AbsolutePoint、PlacementTarget未設定)は、
+    // マルチモニタ環境でWPFが座標変換に使うモニタ/DPIを誤り、カーソルと全く関係ないモニタに
+    // メニューが出る不具合があった(WPF側の既知の問題: dotnet/wpf#8091)。
+    // 代わりにカーソル位置へネイティブAPIで直接動かした透明ウィンドウをPlacementTargetにし、
+    // そのウィンドウを基準にメニューを開く。ターゲットが実際にそのモニタ上に存在するため、
+    // WPFはそのモニタの正しいDPIコンテキストを解決できる。
+    private Window? _menuAnchorWindow;
+
     public TrayIcon()
     {
         InitializeComponent();
@@ -32,6 +42,66 @@ public partial class TrayIcon : TaskbarIcon
 
     [DllImport("user32.dll")]
     private static extern bool GetCursorPos(out Win32Point point);
+
+    [DllImport("user32.dll")]
+    private static extern bool SetWindowPos(nint hWnd, nint hWndInsertAfter, int x, int y, int cx, int cy, uint uFlags);
+
+    [DllImport("user32.dll")]
+    private static extern bool SetForegroundWindow(nint hWnd);
+
+    private const uint SwpNoSize = 0x0001;
+    private const uint SwpNoZOrder = 0x0004;
+    private const uint SwpNoActivate = 0x0010;
+
+    private void TaskbarIcon_PreviewTrayContextMenuOpen(object sender, RoutedEventArgs e)
+    {
+        if (ContextMenu is not { } menu)
+        {
+            return;
+        }
+
+        // 既定のAbsolutePointベースの表示を止め、代わりに下のPlacementTarget方式で開く。
+        e.Handled = true;
+
+        _menuAnchorWindow ??= CreateMenuAnchorWindow();
+
+        GetCursorPos(out var cursor);
+        var anchorHandle = new WindowInteropHelper(_menuAnchorWindow).EnsureHandle();
+        SetWindowPos(anchorHandle, nint.Zero, cursor.X, cursor.Y, 0, 0, SwpNoSize | SwpNoZOrder | SwpNoActivate);
+
+        menu.PlacementTarget = _menuAnchorWindow;
+        menu.Placement = PlacementMode.Bottom;
+        menu.HorizontalOffset = 0;
+        menu.VerticalOffset = 0;
+        menu.IsOpen = true;
+
+        // クリックで閉じる(フォーカスを失うと自動で閉じる)ようにするため、メニュー自身の
+        // ウィンドウをアクティブ化する。取得できない場合はトレイのメッセージウィンドウで代替する
+        // (H.NotifyIconの既定実装と同じフォールバック)。
+        var handle = PresentationSource.FromVisual(menu) is HwndSource source
+            ? source.Handle
+            : this.TrayIcon.WindowHandle;
+        if (handle != nint.Zero)
+        {
+            SetForegroundWindow(handle);
+        }
+    }
+
+    private static Window CreateMenuAnchorWindow()
+    {
+        var window = new Window
+        {
+            WindowStyle = WindowStyle.None,
+            ShowInTaskbar = false,
+            AllowsTransparency = true,
+            Background = null,
+            Width = 0,
+            Height = 0,
+            ShowActivated = false,
+        };
+        window.Show();
+        return window;
+    }
 
     // CenterOwnerではオーナー(HiddenOwnerWindow)が画面外の0x0ウィンドウのため画面中央に
     // フォールバックしてしまう。トレイメニュー経由で開くダイアログはメニュー操作時の
