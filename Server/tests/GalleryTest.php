@@ -139,14 +139,14 @@ return function (TestRunner $runner): void {
         ($ctx['cleanup'])();
     });
 
-    $runner->test('list() filters by tag when a tagFilter is given', function (TestRunner $t): void {
+    $runner->test('list() filters by tag when a tagsFilter is given', function (TestRunner $t): void {
         $ctx = makeGalleryTestContext();
         insertGalleryTestFile($ctx['pdo'], 'hash-cat', 'png', 'image/png');
         insertGalleryTestFile($ctx['pdo'], 'hash-dog', 'png', 'image/png');
         $ctx['gallery']->addTag('hash-cat', 'cat');
         $ctx['gallery']->addTag('hash-dog', 'dog');
 
-        $result = $ctx['gallery']->list(30, 0, 'cat');
+        $result = $ctx['gallery']->list(30, 0, ['cat']);
 
         $t->assertSame(1, count($result['items']));
         $t->assertSame('hash-cat', $result['items'][0]['hash']);
@@ -154,12 +154,12 @@ return function (TestRunner $runner): void {
         ($ctx['cleanup'])();
     });
 
-    $runner->test('list() with an unmatched tagFilter returns no items', function (TestRunner $t): void {
+    $runner->test('list() with an unmatched tagsFilter returns no items', function (TestRunner $t): void {
         $ctx = makeGalleryTestContext();
         insertGalleryTestFile($ctx['pdo'], 'hash-cat', 'png', 'image/png');
         $ctx['gallery']->addTag('hash-cat', 'cat');
 
-        $result = $ctx['gallery']->list(30, 0, 'does-not-exist');
+        $result = $ctx['gallery']->list(30, 0, ['does-not-exist']);
 
         $t->assertSame(0, count($result['items']));
         $t->assertSame(false, $result['has_more']);
@@ -167,7 +167,7 @@ return function (TestRunner $runner): void {
         ($ctx['cleanup'])();
     });
 
-    $runner->test('list() paginates correctly when a tagFilter is applied', function (TestRunner $t): void {
+    $runner->test('list() paginates correctly when a tagsFilter is applied', function (TestRunner $t): void {
         $ctx = makeGalleryTestContext();
         for ($i = 0; $i < 3; $i++) {
             insertGalleryTestFile($ctx['pdo'], "hash-{$i}", 'png', 'image/png');
@@ -175,13 +175,70 @@ return function (TestRunner $runner): void {
         }
         insertGalleryTestFile($ctx['pdo'], 'hash-untagged', 'png', 'image/png');
 
-        $firstPage = $ctx['gallery']->list(2, 0, 'shared-tag');
-        $secondPage = $ctx['gallery']->list(2, 2, 'shared-tag');
+        $firstPage = $ctx['gallery']->list(2, 0, ['shared-tag']);
+        $secondPage = $ctx['gallery']->list(2, 2, ['shared-tag']);
 
         $t->assertSame(2, count($firstPage['items']));
         $t->assertSame(true, $firstPage['has_more']);
         $t->assertSame(1, count($secondPage['items']));
         $t->assertSame(false, $secondPage['has_more']);
+
+        ($ctx['cleanup'])();
+    });
+
+    $runner->test('list() with multiple tagsFilter entries returns only files having all of them (AND)', function (TestRunner $t): void {
+        $ctx = makeGalleryTestContext();
+        insertGalleryTestFile($ctx['pdo'], 'hash-both', 'png', 'image/png');
+        insertGalleryTestFile($ctx['pdo'], 'hash-cat-only', 'png', 'image/png');
+        $ctx['gallery']->addTag('hash-both', 'cat');
+        $ctx['gallery']->addTag('hash-both', 'dog');
+        $ctx['gallery']->addTag('hash-cat-only', 'cat');
+
+        $result = $ctx['gallery']->list(30, 0, ['cat', 'dog']);
+
+        $t->assertSame(1, count($result['items']));
+        $t->assertSame('hash-both', $result['items'][0]['hash']);
+
+        ($ctx['cleanup'])();
+    });
+
+    $runner->test('list() with untaggedOnly returns only files with no tags', function (TestRunner $t): void {
+        $ctx = makeGalleryTestContext();
+        insertGalleryTestFile($ctx['pdo'], 'hash-tagged', 'png', 'image/png');
+        insertGalleryTestFile($ctx['pdo'], 'hash-untagged', 'png', 'image/png');
+        $ctx['gallery']->addTag('hash-tagged', 'cat');
+
+        $result = $ctx['gallery']->list(30, 0, [], true);
+
+        $t->assertSame(1, count($result['items']));
+        $t->assertSame('hash-untagged', $result['items'][0]['hash']);
+
+        ($ctx['cleanup'])();
+    });
+
+    $runner->test('list() ignores untaggedOnly when a tagsFilter is also given', function (TestRunner $t): void {
+        $ctx = makeGalleryTestContext();
+        insertGalleryTestFile($ctx['pdo'], 'hash-tagged', 'png', 'image/png');
+        insertGalleryTestFile($ctx['pdo'], 'hash-untagged', 'png', 'image/png');
+        $ctx['gallery']->addTag('hash-tagged', 'cat');
+
+        $result = $ctx['gallery']->list(30, 0, ['cat'], true);
+
+        $t->assertSame(1, count($result['items']));
+        $t->assertSame('hash-tagged', $result['items'][0]['hash']);
+
+        ($ctx['cleanup'])();
+    });
+
+    $runner->test('getAllTags() returns every distinct tag name in alphabetical order', function (TestRunner $t): void {
+        $ctx = makeGalleryTestContext();
+        insertGalleryTestFile($ctx['pdo'], 'hash-a', 'png', 'image/png');
+        insertGalleryTestFile($ctx['pdo'], 'hash-b', 'png', 'image/png');
+        $ctx['gallery']->addTag('hash-a', 'zebra');
+        $ctx['gallery']->addTag('hash-a', 'apple');
+        $ctx['gallery']->addTag('hash-b', 'zebra');
+
+        $t->assertSame(['apple', 'zebra'], $ctx['gallery']->getAllTags());
 
         ($ctx['cleanup'])();
     });

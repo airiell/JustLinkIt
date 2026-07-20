@@ -35,12 +35,21 @@ if (in_array($method, ['POST', 'DELETE'], true) && ($_SERVER['HTTP_X_REQUESTED_W
     exit;
 }
 
+if ($method === 'GET' && ($_GET['action'] ?? '') === 'get_tags') {
+    echo json_encode(['success' => true, 'tags' => $gallery->getAllTags()]);
+    exit;
+}
+
 if ($method === 'GET') {
     $limit = (int) ($_GET['limit'] ?? 30);
     $offset = (int) ($_GET['offset'] ?? 0);
-    $tag = trim((string) ($_GET['tag'] ?? ''));
+    $untagged = !empty($_GET['untagged']);
+    $tagsFilter = $untagged ? [] : array_filter(array_map(
+        'trim',
+        explode(',', (string) ($_GET['tags'] ?? ''))
+    ), static fn (string $tag): bool => $tag !== '');
 
-    $result = $gallery->list($limit, $offset, $tag === '' ? null : $tag);
+    $result = $gallery->list($limit, $offset, $tagsFilter, $untagged);
     $items = array_map(
         static function (array $item) use ($scheme, $host, $config): array {
             $base = "{$scheme}://{$host}/{$config->uploadDir()}/{$item['hash']}";
