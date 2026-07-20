@@ -24,22 +24,43 @@ final class Gallery
      *     has_more: bool
      * }
      */
-    public function list(int $limit, int $offset, ?string $tagFilter = null): array
+    /**
+     * @param array<int, string> $tagsFilter 指定された場合、これらすべてのタグを持つファイルのみ返す(AND検索)
+     */
+    public function list(int $limit, int $offset, array $tagsFilter = [], bool $untaggedOnly = false): array
     {
         $limit = max(1, min(100, $limit));
         $offset = max(0, $offset);
+        $tagsFilter = array_values(array_unique(array_filter(
+            array_map('trim', $tagsFilter),
+            static fn (string $tag): bool => $tag !== ''
+        )));
 
         $sql = 'SELECT files.id, files.hash, files.extension, files.mime_type, files.created_at FROM files';
-        if ($tagFilter !== null) {
-            $sql .= ' INNER JOIN file_tags ft ON files.id = ft.file_id
-                      INNER JOIN tags t ON ft.tag_id = t.id
-                      WHERE t.name = :tag';
+        $params = [];
+        if ($tagsFilter !== []) {
+            $placeholders = [];
+            foreach ($tagsFilter as $i => $tag) {
+                $placeholder = ":tag{$i}";
+                $placeholders[] = $placeholder;
+                $params[$placeholder] = $tag;
+            }
+            $sql .= ' WHERE files.id IN (
+                SELECT ft.file_id FROM file_tags ft
+                INNER JOIN tags t ON ft.tag_id = t.id
+                WHERE t.name IN (' . implode(', ', $placeholders) . ')
+                GROUP BY ft.file_id
+                HAVING COUNT(DISTINCT t.name) = :tag_count
+            )';
+            $params[':tag_count'] = count($tagsFilter);
+        } elseif ($untaggedOnly) {
+            $sql .= ' WHERE files.id NOT IN (SELECT DISTINCT file_id FROM file_tags)';
         }
         $sql .= ' ORDER BY files.created_at DESC, files.id DESC LIMIT :limit OFFSET :offset';
 
         $stmt = $this->pdo->prepare($sql);
-        if ($tagFilter !== null) {
-            $stmt->bindValue(':tag', $tagFilter, PDO::PARAM_STR);
+        foreach ($params as $placeholder => $value) {
+            $stmt->bindValue($placeholder, $value, $placeholder === ':tag_count' ? PDO::PARAM_INT : PDO::PARAM_STR);
         }
         $stmt->bindValue(':limit', $limit + 1, PDO::PARAM_INT);
         $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
@@ -62,6 +83,14 @@ final class Gallery
         );
 
         return ['items' => $items, 'has_more' => $hasMore];
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public function getAllTags(): array
+    {
+        return $this->pdo->query('SELECT name FROM tags ORDER BY name ASC')->fetchAll(PDO::FETCH_COLUMN);
     }
 
     public function delete(string $hash): bool

@@ -9,14 +9,27 @@
 <body>
 
 <header class="app-header">
-  <h1>JustLinkIt</h1>
+  <div class="app-header-main">
+    <h1>JustLinkIt</h1>
+    <div class="search-bar">
+      <div class="tag-search-wrapper">
+        <input type="text" id="tag-search-input" class="tag-search-input" placeholder="タグで検索 (カンマ区切りでAND検索)" autocomplete="off">
+        <div id="tag-suggest-popover" class="tag-suggest-popover" hidden></div>
+      </div>
+      <label class="untagged-toggle">
+        <input type="checkbox" id="untagged-checkbox">
+        タグなし
+      </label>
+      <button type="button" id="tag-search-button" class="tag-search-button">検索</button>
+    </div>
+  </div>
+  <div id="filter-bar" class="filter-bar" hidden>
+    🏷️ 絞り込み中: <span id="current-filter-tags" class="current-filter-tags"></span>
+    <button type="button" id="clear-filter" class="clear-filter" aria-label="絞り込みを解除">&times; 解除</button>
+  </div>
 </header>
 
 <main>
-  <div id="filter-bar" class="filter-bar" hidden>
-    🏷️ 絞り込み中: <span id="current-filter-tag"></span>
-    <button type="button" id="clear-filter" class="clear-filter" aria-label="絞り込みを解除">&times; 解除</button>
-  </div>
   <div id="grid" class="grid"></div>
   <p id="empty-message" class="empty-message" hidden>アップロードされたファイルはまだありません。</p>
   <p id="loading-message" class="loading-message">読み込み中...</p>

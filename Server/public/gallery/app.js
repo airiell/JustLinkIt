@@ -7,8 +7,13 @@
   const sentinel = document.getElementById('sentinel');
 
   const filterBar = document.getElementById('filter-bar');
-  const currentFilterTag = document.getElementById('current-filter-tag');
+  const currentFilterTags = document.getElementById('current-filter-tags');
   const clearFilterButton = document.getElementById('clear-filter');
+
+  const tagSearchInput = document.getElementById('tag-search-input');
+  const tagSearchButton = document.getElementById('tag-search-button');
+  const tagSuggestPopover = document.getElementById('tag-suggest-popover');
+  const untaggedCheckbox = document.getElementById('untagged-checkbox');
 
   const loginDialog = document.getElementById('login-dialog');
   const loginForm = document.getElementById('login-form');
@@ -41,7 +46,9 @@
   let currentIndex = -1;
   let observer = null;
   let popoverItem = null;
-  let currentTagFilter = null;
+  let currentTagsFilter = [];
+  let currentUntaggedFilter = false;
+  let allTags = [];
 
   function apiFetch(path, options = {}) {
     return fetch(path, { ...options, credentials: 'same-origin' });
@@ -131,7 +138,7 @@
       chip.addEventListener('click', (event) => {
         // カード全体のクリック(ビューアーを開く動作)を発火させない
         event.stopPropagation();
-        applyTagFilter(tag);
+        applyTagsFilter([tag], false);
       });
       container.appendChild(chip);
     }
@@ -158,8 +165,13 @@
     }
     isLoading = true;
 
-    const tagQuery = currentTagFilter ? `&tag=${encodeURIComponent(currentTagFilter)}` : '';
-    const response = await apiFetch(`../api/gallery.php?limit=${PAGE_SIZE}&offset=${offset}${tagQuery}`);
+    let filterQuery = '';
+    if (currentUntaggedFilter) {
+      filterQuery = '&untagged=1';
+    } else if (currentTagsFilter.length > 0) {
+      filterQuery = `&tags=${encodeURIComponent(currentTagsFilter.join(','))}`;
+    }
+    const response = await apiFetch(`../api/gallery.php?limit=${PAGE_SIZE}&offset=${offset}${filterQuery}`);
 
     if (response.status === 401) {
       isLoading = false;
@@ -189,17 +201,25 @@
     }
   }
 
-  function applyTagFilter(tag) {
+  function applyTagsFilter(tags, untagged) {
     if (viewerDialog.open) {
       closeViewer();
     }
     if (!tagPopover.hidden) {
       closeTagPopover();
     }
+    hideSuggestPopover();
 
-    currentTagFilter = tag || null;
-    filterBar.hidden = !currentTagFilter;
-    currentFilterTag.textContent = currentTagFilter || '';
+    currentTagsFilter = Array.from(new Set((tags || []).map((t) => t.trim()).filter(Boolean)));
+    currentUntaggedFilter = !!untagged;
+
+    tagSearchInput.value = currentUntaggedFilter ? '' : currentTagsFilter.join(', ');
+    tagSearchInput.disabled = currentUntaggedFilter;
+    untaggedCheckbox.checked = currentUntaggedFilter;
+
+    const hasFilter = currentUntaggedFilter || currentTagsFilter.length > 0;
+    filterBar.hidden = !hasFilter;
+    renderCurrentFilterTags();
 
     items = [];
     offset = 0;
@@ -213,6 +233,80 @@
     }
 
     loadNextPage();
+  }
+
+  function renderCurrentFilterTags() {
+    currentFilterTags.innerHTML = '';
+
+    if (currentUntaggedFilter) {
+      const chip = document.createElement('span');
+      chip.className = 'filter-tag-chip';
+      chip.textContent = 'タグなし';
+      currentFilterTags.appendChild(chip);
+      return;
+    }
+
+    for (const tag of currentTagsFilter) {
+      const chip = document.createElement('span');
+      chip.className = 'filter-tag-chip';
+      chip.textContent = tag;
+      currentFilterTags.appendChild(chip);
+    }
+  }
+
+  async function loadAllTags() {
+    const response = await apiFetch('../api/gallery.php?action=get_tags');
+    if (response.status === 401) {
+      return;
+    }
+    const data = await response.json();
+    if (data.success) {
+      allTags = data.tags;
+    }
+  }
+
+  function getCurrentSearchSegment(value) {
+    const parts = value.split(',');
+    return parts[parts.length - 1].trim();
+  }
+
+  function renderSuggestPopover(tags) {
+    if (tags.length === 0) {
+      hideSuggestPopover();
+      return;
+    }
+
+    tagSuggestPopover.innerHTML = '';
+    for (const tag of tags) {
+      const item = document.createElement('div');
+      item.className = 'tag-suggest-item';
+      item.textContent = tag;
+      item.addEventListener('mousedown', (event) => {
+        // inputのblurが先に発火して候補が消えてしまうのを防ぐ
+        event.preventDefault();
+        selectSuggestedTag(tag);
+      });
+      tagSuggestPopover.appendChild(item);
+    }
+    tagSuggestPopover.hidden = false;
+  }
+
+  function selectSuggestedTag(tag) {
+    const parts = tagSearchInput.value.split(',');
+    parts[parts.length - 1] = ` ${tag}`;
+    tagSearchInput.value = `${parts.map((p) => p.trim()).filter(Boolean).join(', ')}, `;
+    hideSuggestPopover();
+    tagSearchInput.focus();
+  }
+
+  function hideSuggestPopover() {
+    tagSuggestPopover.hidden = true;
+    tagSuggestPopover.innerHTML = '';
+  }
+
+  function executeTagSearch() {
+    const tags = tagSearchInput.value.split(',').map((t) => t.trim()).filter(Boolean);
+    applyTagsFilter(tags, false);
   }
 
   function setupInfiniteScroll() {
@@ -250,6 +344,7 @@
     }
 
     loginDialog.close();
+    loadAllTags();
     loadNextPage();
   }
 
@@ -286,7 +381,7 @@
       chip.addEventListener('click', (event) => {
         // ダイアログの背景クリック(閉じる動作)を発火させない
         event.stopPropagation();
-        applyTagFilter(tag);
+        applyTagsFilter([tag], false);
       });
       viewerTagList.appendChild(chip);
     }
@@ -310,6 +405,11 @@
     }
 
     item.tags = data.tags;
+    for (const tag of data.tags) {
+      if (!allTags.includes(tag)) {
+        allTags.push(tag);
+      }
+    }
     onTagsUpdated(item);
   }
 
@@ -466,7 +566,39 @@
   }
 
   loginForm.addEventListener('submit', handleLoginSubmit);
-  clearFilterButton.addEventListener('click', () => applyTagFilter(null));
+  clearFilterButton.addEventListener('click', () => applyTagsFilter([], false));
+  tagSearchButton.addEventListener('click', executeTagSearch);
+  tagSearchInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      executeTagSearch();
+    } else if (event.key === 'Escape') {
+      hideSuggestPopover();
+    }
+  });
+  tagSearchInput.addEventListener('input', () => {
+    const segment = getCurrentSearchSegment(tagSearchInput.value);
+    if (segment === '') {
+      hideSuggestPopover();
+      return;
+    }
+    const alreadyEntered = tagSearchInput.value
+      .split(',')
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean);
+    const matches = allTags.filter(
+      (tag) => tag.toLowerCase().includes(segment.toLowerCase()) && !alreadyEntered.includes(tag.toLowerCase())
+    );
+    renderSuggestPopover(matches.slice(0, 20));
+  });
+  untaggedCheckbox.addEventListener('change', () => {
+    applyTagsFilter([], untaggedCheckbox.checked);
+  });
+  document.addEventListener('click', (event) => {
+    if (!tagSuggestPopover.hidden && !event.target.closest('.tag-search-wrapper')) {
+      hideSuggestPopover();
+    }
+  });
   tagPopoverForm.addEventListener('submit', (event) => {
     event.preventDefault();
     if (popoverItem) {
@@ -550,5 +682,6 @@
   });
 
   setupInfiniteScroll();
+  loadAllTags();
   loadNextPage();
 })();
