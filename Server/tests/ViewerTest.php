@@ -38,16 +38,33 @@ return function (TestRunner $runner): void {
 
     $runner->test('renderHtml() includes OGP video tags pointing at the given URL', function (TestRunner $t): void {
         $viewer = new Viewer(makeViewerTestDb());
-        $html = $viewer->renderHtml('https://example.com/u/abc123.mp4', 'video/mp4');
+        $html = $viewer->renderHtml('https://example.com/u/abc123.mp4', 'video/mp4', 'https://example.com/og-image.png');
 
         $t->assertTrue(str_contains($html, 'property="og:video" content="https://example.com/u/abc123.mp4"'));
         $t->assertTrue(str_contains($html, 'property="og:video:type" content="video/mp4"'));
         $t->assertTrue(str_contains($html, 'src="https://example.com/u/abc123.mp4"'));
     });
 
+    $runner->test('renderHtml() includes video size, OGP image, and Twitter card tags', function (TestRunner $t): void {
+        $viewer = new Viewer(makeViewerTestDb());
+        $html = $viewer->renderHtml('https://example.com/u/abc123.mp4', 'video/mp4', 'https://example.com/og-image.png');
+
+        // Discord向け: 動画サイズ情報
+        $t->assertTrue(str_contains($html, 'property="og:video:width" content="1280"'), 'og:video:width が出力されていること');
+        $t->assertTrue(str_contains($html, 'property="og:video:height" content="720"'), 'og:video:height が出力されていること');
+
+        // Discord / Bluesky / Twitter共通: OGP画像
+        $t->assertTrue(str_contains($html, 'property="og:image" content="https://example.com/og-image.png"'), 'og:image が出力されていること');
+
+        // Twitter/X向け: summary_large_image カード
+        $t->assertTrue(str_contains($html, 'name="twitter:card" content="summary_large_image"'), 'twitter:card が出力されていること');
+        $t->assertTrue(str_contains($html, 'name="twitter:title" content="JustLinkIt"'), 'twitter:title が出力されていること');
+        $t->assertTrue(str_contains($html, 'name="twitter:image" content="https://example.com/og-image.png"'), 'twitter:image が出力されていること');
+    });
+
     $runner->test('renderHtml() escapes special characters to prevent XSS', function (TestRunner $t): void {
         $viewer = new Viewer(makeViewerTestDb());
-        $html = $viewer->renderHtml('https://example.com/u/"><script>alert(1)</script>.mp4', 'video/mp4');
+        $html = $viewer->renderHtml('https://example.com/u/"><script>alert(1)</script>.mp4', 'video/mp4', 'https://example.com/og-image.png');
 
         $t->assertTrue(!str_contains($html, '<script>alert(1)</script>'), 'raw script tag must not appear in output');
         $t->assertTrue(str_contains($html, '&lt;script&gt;'), 'special characters should be HTML-escaped');
