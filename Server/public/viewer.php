@@ -39,4 +39,5 @@ if (!Uploader::isVideoExtension($file['extension'])) {
 }
 
 header('Content-Type: text/html; charset=UTF-8');
-echo $viewer->renderHtml($fileUrl, $file['mime_type']);
+$ogImageUrl = "{$scheme}://{$host}/og-image.png";
+echo $viewer->renderHtml($fileUrl, $file['mime_type'], $ogImageUrl);
