@@ -6,8 +6,11 @@ namespace JustLinkIt\Server;
 
 require_once __DIR__ . '/../src/Config.php';
 require_once __DIR__ . '/../src/Database.php';
+require_once __DIR__ . '/../src/ErrorHandler.php';
 require_once __DIR__ . '/../src/Uploader.php';
 require_once __DIR__ . '/../src/Viewer.php';
+
+ErrorHandler::installHtml();
 
 $hash = (string) ($_GET['hash'] ?? '');
 if (!preg_match('/^[a-f0-9]{64}$/', $hash)) {
