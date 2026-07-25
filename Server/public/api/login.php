@@ -6,6 +6,9 @@ namespace JustLinkIt\Server;
 
 require_once __DIR__ . '/../../src/Auth.php';
 require_once __DIR__ . '/../../src/Config.php';
+require_once __DIR__ . '/../../src/ErrorHandler.php';
+
+ErrorHandler::installJson();
 
 header('Content-Type: application/json');
 
@@ -26,6 +29,15 @@ if (!Auth::verifyPassword($password, $config->galleryPasswordHash())) {
     exit;
 }
 
+$isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
+session_set_cookie_params([
+    'lifetime' => 0,
+    'path' => '/',
+    'domain' => '',
+    'secure' => $isHttps,
+    'httponly' => true,
+    'samesite' => 'Lax',
+]);
 session_start();
 $_SESSION['gallery_authenticated'] = true;
 
