@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using JustLinkIt.Client.Models;
@@ -10,11 +11,10 @@ namespace JustLinkIt.Client.ViewModels;
 
 public partial class MainViewModel : ObservableObject
 {
-    // Altキー押下時にアップロードをキャンセルする判定用（FileSystemWatcherのスレッドから
-    // 呼ばれるため、WPFのKeyboard.Modifiersではなく物理キー状態を直接見るこちらを使う）。
-    [System.Runtime.InteropServices.DllImport("user32.dll")]
-    private static extern short GetAsyncKeyState(int vKey);
-    private const int VK_MENU = 0x12; // Altキー
+    // Win+Shift+Xで予約された「次の1件はアップロードせずクリップボードのみ」フラグ。
+    // グローバルホットキーの発火(UIスレッド)とファイル検知(FileWatcherServiceのスレッド)が
+    // 別スレッドから同時に触るため、Interlockedで排他的に読み書きする。
+    private int _clipboardOnlyArmed;
 
     private readonly ApiClient _apiClient = new();
     private readonly ClipboardManager _clipboardManager = new();
@@ -32,6 +32,9 @@ public partial class MainViewModel : ObservableObject
     // アップロード失敗をトレイのバルーン通知として即時に気づけるようにするためのイベント。
     // ViewModelはH.NotifyIcon等のView固有APIを知らないため、通知の実際の表示はView(TrayIcon)側で行う。
     public event EventHandler<string>? UploadFailed;
+
+    // クリップボードのみモードの予約をトレイのバルーン通知で知らせるためのイベント（理由は上記と同様）。
+    public event EventHandler<string>? ClipboardOnlyArmed;
 
     public MainViewModel()
     {
@@ -181,14 +184,24 @@ public partial class MainViewModel : ObservableObject
         System.Windows.Application.Current.Shutdown();
     }
 
+    // Win+Shift+Xのグローバルホットキー(App.xaml.cs)から呼ばれる。次の1件の検知だけを
+    // 対象にする一回限りの予約で、実際に消費されるのはOnFileDetected側。
+    public void ArmClipboardOnlyForNextCapture()
+    {
+        Interlocked.Exchange(ref _clipboardOnlyArmed, 1);
+        StatusMessage = "次のキャプチャはアップロードせずクリップボードのみにします。";
+        Logger.Log("クリップボードのみモードを予約しました (Win+Shift+X)。");
+        ClipboardOnlyArmed?.Invoke(this, StatusMessage);
+    }
+
     private async void OnFileDetected(object? sender, WatchedFileDetectedEventArgs e)
     {
         Logger.Log($"ファイルを検知しました: {e.FilePath} ({e.FileType})");
 
-        if ((GetAsyncKeyState(VK_MENU) & 0x8000) != 0)
+        if (Interlocked.Exchange(ref _clipboardOnlyArmed, 0) == 1)
         {
-            StatusMessage = "アップロードをキャンセルしました (Altキー)";
-            Logger.Log($"アップロードをキャンセルしました (Altキー): {e.FilePath}");
+            StatusMessage = "アップロードをキャンセルしました (クリップボードのみモード)";
+            Logger.Log($"アップロードをキャンセルしました (クリップボードのみモード): {e.FilePath}");
             return;
         }
 
