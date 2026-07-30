@@ -15,6 +15,7 @@ public partial class App : Application
     private MainViewModel? _mainViewModel;
     private SingleInstanceManager? _singleInstance;
     private Window? _hiddenOwnerWindow;
+    private GlobalHotKeyService? _hotKeyService;
 
     // 設定用ダイアログ(OpenFileDialog/OpenFolderDialog)の親として使う、画面には一切表示されない
     // ウィンドウ。このアプリはMainWindowを持たないトレイオンリー構成のため、親を明示的に渡さないと
@@ -62,6 +63,9 @@ public partial class App : Application
         _mainViewModel = new MainViewModel();
         await _mainViewModel.InitializeAsync();
 
+        _hotKeyService = new GlobalHotKeyService(_hiddenOwnerWindow);
+        _hotKeyService.Pressed += (_, _) => _mainViewModel.ArmClipboardOnlyForNextCapture();
+
         _singleInstance.StartListening(filePath => _mainViewModel.UploadFileAsync(filePath));
 
         await PromptSendToRegistrationIfNeededAsync();
@@ -74,6 +78,8 @@ public partial class App : Application
 
         _mainViewModel.UploadFailed += (_, message) =>
             _trayIcon.ShowNotification("JustLinkIt", message, H.NotifyIcon.Core.NotificationIcon.Error);
+        _mainViewModel.ClipboardOnlyArmed += (_, message) =>
+            _trayIcon.ShowNotification("JustLinkIt", message, H.NotifyIcon.Core.NotificationIcon.Info);
 
         if (filePathArg is not null)
         {
@@ -118,6 +124,7 @@ public partial class App : Application
     protected override void OnExit(ExitEventArgs e)
     {
         _trayIcon?.Dispose();
+        _hotKeyService?.Dispose();
         _singleInstance?.Dispose();
         _hiddenOwnerWindow?.Close();
         base.OnExit(e);
