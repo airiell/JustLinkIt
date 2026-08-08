@@ -126,7 +126,11 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
-        await _clipboardManager.CopyUrlToClipboardAsync(result.Url);
+        if (Settings.CopyUploadedUrlToClipboard)
+        {
+            await _clipboardManager.CopyUrlToClipboardAsync(result.Url);
+        }
+
         StatusMessage = $"アップロード完了: {result.Url}";
         Logger.Log($"アップロード成功: {filePath} -> {result.Url}");
 
