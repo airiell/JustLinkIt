@@ -15,6 +15,10 @@
                           IsCheckable="True"
                           IsChecked="{Binding Settings.OpenBrowserOnUpload, Mode=TwoWay}"
                           Click="SettingToggled_Click" />
+                <MenuItem Header="アップロード後にURLをクリップボードにコピー"
+                          IsCheckable="True"
+                          IsChecked="{Binding Settings.CopyUploadedUrlToClipboard, Mode=TwoWay}"
+                          Click="SettingToggled_Click" />
                 <MenuItem Header="アップロード後にローカルファイルを削除"
                           IsCheckable="True"
                           IsChecked="{Binding Settings.DeleteLocalFileAfterUpload, Mode=TwoWay}"

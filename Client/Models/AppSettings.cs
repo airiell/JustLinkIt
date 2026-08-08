@@ -18,6 +18,12 @@ public class AppSettings
     // アップロード成功時、取得したURLを既定のブラウザで自動的に開くか（§3.1）。
     public bool OpenBrowserOnUpload { get; set; } = true;
 
+    // アップロード成功時、取得したURLをクリップボードにコピーするか。
+    // OFFの場合はクリップボードに一切触れない（画像そのものを維持したいユーザー向け。
+    // 例えばSnipping Toolはスクリーンショット撮影時に画像自体をクリップボードへ入れるため、
+    // ここで何もしなければ結果的にその画像がそのまま残る）。
+    public bool CopyUploadedUrlToClipboard { get; set; } = true;
+
     // アップロード完了後、PC内の元ファイルを削除するか（§3.1）。
     public bool DeleteLocalFileAfterUpload { get; set; }
 
