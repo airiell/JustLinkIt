@@ -21,6 +21,7 @@
         タグなし
       </label>
       <button type="button" id="tag-search-button" class="tag-search-button">検索</button>
+      <button type="button" id="select-mode-button" class="select-mode-button">選択</button>
     </div>
   </div>
   <div id="filter-bar" class="filter-bar" hidden>
@@ -64,7 +65,7 @@
 
 <dialog id="delete-confirm-dialog">
   <div class="confirm-content">
-    <p>本当に削除しますか？</p>
+    <p id="delete-confirm-text">本当に削除しますか？</p>
     <div class="confirm-actions">
       <button type="button" id="delete-confirm-cancel" class="confirm-cancel">キャンセル</button>
       <button type="button" id="delete-confirm-ok" class="confirm-ok">削除する</button>
@@ -77,6 +78,30 @@
   <form id="tag-popover-form" class="tag-popover-form">
     <input type="text" id="tag-popover-input" placeholder="タグを追加..." maxlength="50" autocomplete="off">
   </form>
+</div>
+
+<div id="bulk-bar" class="bulk-bar" hidden>
+  <span id="bulk-count" class="bulk-count">0件選択中</span>
+  <button type="button" id="bulk-select-all" class="bulk-btn">表示中をすべて選択</button>
+  <button type="button" id="bulk-add-tag" class="bulk-btn">タグを追加</button>
+  <button type="button" id="bulk-remove-tag" class="bulk-btn">タグを削除</button>
+  <button type="button" id="bulk-delete" class="bulk-btn bulk-btn-danger">削除</button>
+  <button type="button" id="bulk-clear" class="bulk-btn">選択解除</button>
+</div>
+
+<div id="bulk-add-popover" class="bulk-popover" hidden>
+  <form id="bulk-add-form" class="bulk-add-form">
+    <div class="bulk-add-input-wrapper">
+      <input type="text" id="bulk-add-input" placeholder="タグを追加 (カンマ区切りで複数)" autocomplete="off">
+      <div id="bulk-add-suggest" class="tag-suggest-popover" hidden></div>
+    </div>
+    <button type="submit">追加</button>
+  </form>
+</div>
+
+<div id="bulk-remove-popover" class="bulk-popover" hidden>
+  <p id="bulk-remove-empty" class="bulk-popover-empty" hidden>選択したファイルにタグがありません。</p>
+  <div id="bulk-remove-list" class="bulk-remove-list"></div>
 </div>
 
 <script src="app.js"></script>

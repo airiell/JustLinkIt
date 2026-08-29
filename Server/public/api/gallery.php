@@ -11,6 +11,9 @@ require_once __DIR__ . '/../../src/Gallery.php';
 
 ErrorHandler::installJson();
 
+// 一括操作（タグ付け・削除）で1リクエストに指定できるハッシュ数の上限。
+const MAX_BATCH = 200;
+
 header('Content-Type: application/json');
 
 $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
@@ -80,6 +83,68 @@ if ($method === 'GET') {
 }
 
 if ($method === 'POST') {
+    $input = json_decode(file_get_contents('php://input') ?: '', true);
+    $action = is_array($input) ? (string) ($input['action'] ?? '') : '';
+
+    // ボディに hashes 配列があれば一括モード。無ければ従来の単体 ?hash= パス。
+    if (is_array($input) && isset($input['hashes']) && is_array($input['hashes'])) {
+        $hashes = array_map(static fn ($h): string => is_string($h) ? $h : '', $input['hashes']);
+
+        if (count($hashes) > MAX_BATCH) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => '一度に操作できる件数の上限を超えています。', 'code' => 400]);
+            exit;
+        }
+
+        foreach ($hashes as $h) {
+            // 64桁は本アプリ自身が生成するSHA-256形式。それより短い桁数は、他システムから
+            // 移行した既存データ(例: MD5ベースの32桁ハッシュ)を許容するためのもの。
+            if (!preg_match('/^[a-f0-9]{8,64}$/', $h)) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => '不正なハッシュ値です。', 'code' => 400]);
+                exit;
+            }
+        }
+
+        if ($hashes === []) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => '対象が指定されていません。', 'code' => 400]);
+            exit;
+        }
+
+        if ($action === 'delete') {
+            $result = $gallery->deleteMany($hashes);
+            echo json_encode([
+                'success' => true,
+                'deleted' => $result['deleted'],
+                'not_found' => $result['not_found'],
+            ]);
+            exit;
+        }
+
+        $tag = (string) ($input['tag'] ?? '');
+        $result = match ($action) {
+            'add_tag' => $gallery->addTagToMany($hashes, $tag),
+            'remove_tag' => $gallery->removeTagFromMany($hashes, $tag),
+            default => null,
+        };
+
+        if ($result === null) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => '不正な操作です。', 'code' => 400]);
+            exit;
+        }
+
+        echo json_encode([
+            'success' => true,
+            'action' => $action,
+            'tag' => $tag,
+            'items' => $result['items'],
+            'not_found' => $result['not_found'],
+        ]);
+        exit;
+    }
+
     $hash = (string) ($_GET['hash'] ?? '');
     // 64桁は本アプリ自身が生成するSHA-256形式。それより短い桁数は、他システムから
     // 移行した既存データ(例: MD5ベースの32桁ハッシュ)を許容するためのもの。
@@ -89,8 +154,6 @@ if ($method === 'POST') {
         exit;
     }
 
-    $input = json_decode(file_get_contents('php://input') ?: '', true);
-    $action = is_array($input) ? (string) ($input['action'] ?? '') : '';
     $tag = is_array($input) ? (string) ($input['tag'] ?? '') : '';
 
     $tags = match ($action) {

@@ -164,6 +164,192 @@ final class Gallery
         return $this->getTagsForFileId($fileId);
     }
 
+    /**
+     * 複数ファイルに同一タグを一括付与する。存在しないhashはエラーにせず not_found に集約する。
+     * 空タグ・長すぎるタグは単体 addTag() と同様に無変更で扱う。
+     *
+     * @param array<int, string> $hashes
+     * @return array{items: array<int, array{hash: string, tags: array<int, string>}>, not_found: array<int, string>}
+     */
+    public function addTagToMany(array $hashes, string $tagName): array
+    {
+        $resolved = $this->resolveHashes($hashes);
+        $tagName = trim($tagName);
+        $valid = $tagName !== '' && mb_strlen($tagName) <= self::MAX_TAG_LENGTH;
+
+        if ($valid && $resolved['map'] !== []) {
+            $this->pdo->beginTransaction();
+            try {
+                $this->pdo->prepare('INSERT OR IGNORE INTO tags (name) VALUES (:name)')
+                    ->execute(['name' => $tagName]);
+
+                $stmt = $this->pdo->prepare('SELECT id FROM tags WHERE name = :name');
+                $stmt->execute(['name' => $tagName]);
+                $tagId = (int) $stmt->fetchColumn();
+
+                $insert = $this->pdo->prepare(
+                    'INSERT OR IGNORE INTO file_tags (file_id, tag_id) VALUES (:file_id, :tag_id)'
+                );
+                foreach ($resolved['map'] as $fileId) {
+                    $insert->execute(['file_id' => $fileId, 'tag_id' => $tagId]);
+                }
+
+                $this->pdo->commit();
+            } catch (\Throwable $e) {
+                $this->pdo->rollBack();
+                throw $e;
+            }
+        }
+
+        return $this->buildManyTagResult($resolved);
+    }
+
+    /**
+     * 複数ファイルから同一タグを一括除去する。存在しないhashはエラーにせず not_found に集約する。
+     *
+     * @param array<int, string> $hashes
+     * @return array{items: array<int, array{hash: string, tags: array<int, string>}>, not_found: array<int, string>}
+     */
+    public function removeTagFromMany(array $hashes, string $tagName): array
+    {
+        $resolved = $this->resolveHashes($hashes);
+        $tagName = trim($tagName);
+
+        if ($tagName !== '' && $resolved['map'] !== []) {
+            $fileIds = array_values($resolved['map']);
+            $placeholders = implode(', ', array_fill(0, count($fileIds), '?'));
+
+            $this->pdo->beginTransaction();
+            try {
+                $stmt = $this->pdo->prepare(
+                    "DELETE FROM file_tags
+                     WHERE tag_id IN (SELECT id FROM tags WHERE name = ?)
+                       AND file_id IN ({$placeholders})"
+                );
+                $stmt->execute(array_merge([$tagName], $fileIds));
+
+                $this->pdo->commit();
+            } catch (\Throwable $e) {
+                $this->pdo->rollBack();
+                throw $e;
+            }
+        }
+
+        return $this->buildManyTagResult($resolved);
+    }
+
+    /**
+     * 複数ファイルをDBレコードごと一括削除し、対応する実ファイルも削除する。
+     * 存在しないhashはエラーにせず not_found に集約する。
+     *
+     * @param array<int, string> $hashes
+     * @return array{deleted: array<int, string>, not_found: array<int, string>}
+     */
+    public function deleteMany(array $hashes): array
+    {
+        $hashes = $this->normalizeHashes($hashes);
+        if ($hashes === []) {
+            return ['deleted' => [], 'not_found' => []];
+        }
+
+        $placeholders = implode(', ', array_fill(0, count($hashes), '?'));
+        $stmt = $this->pdo->prepare("SELECT hash, extension FROM files WHERE hash IN ({$placeholders})");
+        $stmt->execute($hashes);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $foundHashes = array_column($rows, 'hash');
+        $deleted = array_values(array_filter($hashes, static fn (string $h): bool => in_array($h, $foundHashes, true)));
+        $notFound = array_values(array_filter($hashes, static fn (string $h): bool => !in_array($h, $foundHashes, true)));
+
+        if ($deleted === []) {
+            return ['deleted' => [], 'not_found' => $notFound];
+        }
+
+        $delPlaceholders = implode(', ', array_fill(0, count($deleted), '?'));
+        $this->pdo->beginTransaction();
+        try {
+            $this->pdo->prepare("DELETE FROM files WHERE hash IN ({$delPlaceholders})")->execute($deleted);
+            $this->pdo->commit();
+        } catch (\Throwable $e) {
+            $this->pdo->rollBack();
+            throw $e;
+        }
+
+        // 実ファイルの削除はDBコミット後に行う。先にファイルを消してDB削除がロールバックされると
+        // 「DBには残っているが実体がない」状態になるため。
+        // $hash はAPI層で64桁16進数に検証済みだが、多層防御として basename() を適用する。
+        foreach ($rows as $row) {
+            $filePath = $this->config->uploadDirPath() . '/' . basename($row['hash']) . '.' . basename($row['extension']);
+            if (is_file($filePath)) {
+                unlink($filePath);
+            }
+        }
+
+        return ['deleted' => $deleted, 'not_found' => $notFound];
+    }
+
+    /**
+     * @param array<int, string> $hashes
+     * @return array<int, string> 重複・空要素を除去し、入力順を保持したハッシュ配列
+     */
+    private function normalizeHashes(array $hashes): array
+    {
+        return array_values(array_unique(array_filter(
+            array_map('trim', $hashes),
+            static fn (string $hash): bool => $hash !== ''
+        )));
+    }
+
+    /**
+     * @param array<int, string> $hashes
+     * @return array{map: array<string, int>, not_found: array<int, string>}
+     *         map は入力順を保持した hash => file_id。not_found は該当レコードのないhash。
+     */
+    private function resolveHashes(array $hashes): array
+    {
+        $hashes = $this->normalizeHashes($hashes);
+        if ($hashes === []) {
+            return ['map' => [], 'not_found' => []];
+        }
+
+        $placeholders = implode(', ', array_fill(0, count($hashes), '?'));
+        $stmt = $this->pdo->prepare("SELECT id, hash FROM files WHERE hash IN ({$placeholders})");
+        $stmt->execute($hashes);
+
+        $found = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $found[$row['hash']] = (int) $row['id'];
+        }
+
+        $map = [];
+        $notFound = [];
+        foreach ($hashes as $hash) {
+            if (isset($found[$hash])) {
+                $map[$hash] = $found[$hash];
+            } else {
+                $notFound[] = $hash;
+            }
+        }
+
+        return ['map' => $map, 'not_found' => $notFound];
+    }
+
+    /**
+     * @param array{map: array<string, int>, not_found: array<int, string>} $resolved
+     * @return array{items: array<int, array{hash: string, tags: array<int, string>}>, not_found: array<int, string>}
+     */
+    private function buildManyTagResult(array $resolved): array
+    {
+        $items = [];
+        foreach ($resolved['map'] as $hash => $fileId) {
+            // 全桁が数字のhash（移行データのMD5等）はPHPの配列キー仕様でint化されるため、
+            // JSON出力が数値にならないよう明示的に文字列へ戻す。
+            $items[] = ['hash' => (string) $hash, 'tags' => $this->getTagsForFileId($fileId)];
+        }
+
+        return ['items' => $items, 'not_found' => $resolved['not_found']];
+    }
+
     private function findFileId(string $hash): ?int
     {
         $stmt = $this->pdo->prepare('SELECT id FROM files WHERE hash = :hash');
