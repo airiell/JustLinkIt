@@ -39,6 +39,24 @@
   const tagPopoverForm = document.getElementById('tag-popover-form');
   const tagPopoverInput = document.getElementById('tag-popover-input');
 
+  const deleteConfirmText = document.getElementById('delete-confirm-text');
+
+  const selectModeButton = document.getElementById('select-mode-button');
+  const bulkBar = document.getElementById('bulk-bar');
+  const bulkCount = document.getElementById('bulk-count');
+  const bulkSelectAllButton = document.getElementById('bulk-select-all');
+  const bulkAddTagButton = document.getElementById('bulk-add-tag');
+  const bulkRemoveTagButton = document.getElementById('bulk-remove-tag');
+  const bulkDeleteButton = document.getElementById('bulk-delete');
+  const bulkClearButton = document.getElementById('bulk-clear');
+  const bulkAddPopover = document.getElementById('bulk-add-popover');
+  const bulkAddForm = document.getElementById('bulk-add-form');
+  const bulkAddInput = document.getElementById('bulk-add-input');
+  const bulkAddSuggest = document.getElementById('bulk-add-suggest');
+  const bulkRemovePopover = document.getElementById('bulk-remove-popover');
+  const bulkRemoveList = document.getElementById('bulk-remove-list');
+  const bulkRemoveEmpty = document.getElementById('bulk-remove-empty');
+
   let items = [];
   let offset = 0;
   let hasMore = true;
@@ -49,6 +67,10 @@
   let currentTagsFilter = [];
   let currentUntaggedFilter = false;
   let allTags = [];
+  let selectionMode = false;
+  const selectedHashes = new Set();
+  let lastSelectedIndex = -1;
+  let deleteConfirmMode = 'single';
 
   function apiFetch(path, options = {}) {
     return fetch(path, { ...options, credentials: 'same-origin' });
@@ -125,7 +147,22 @@
     });
     card.appendChild(tagButton);
 
-    card.addEventListener('click', () => openViewer(items.indexOf(item)));
+    const check = document.createElement('div');
+    check.className = 'card-check';
+    check.textContent = '✓';
+    card.appendChild(check);
+
+    if (selectedHashes.has(item.hash)) {
+      card.classList.add('selected');
+    }
+
+    card.addEventListener('click', (event) => {
+      if (selectionMode) {
+        handleSelectClick(item, event);
+        return;
+      }
+      openViewer(items.indexOf(item));
+    });
     grid.appendChild(card);
   }
 
@@ -207,6 +244,9 @@
     }
     if (!tagPopover.hidden) {
       closeTagPopover();
+    }
+    if (selectionMode) {
+      exitSelectionMode();
     }
     hideSuggestPopover();
 
@@ -522,6 +562,8 @@
     if (currentIndex < 0) {
       return;
     }
+    deleteConfirmMode = 'single';
+    deleteConfirmText.textContent = '本当に削除しますか？';
     if (typeof deleteConfirmDialog.showModal === 'function') {
       deleteConfirmDialog.showModal();
     }
@@ -563,6 +605,311 @@
     }
 
     showViewerAt(Math.min(currentIndex, items.length - 1));
+  }
+
+  // --- 一括選択 ---
+
+  function enterSelectionMode() {
+    selectionMode = true;
+    document.body.classList.add('selection-mode');
+    selectModeButton.classList.add('active');
+    selectModeButton.textContent = '選択終了';
+    if (viewerDialog.open) {
+      closeViewer();
+    }
+    closeTagPopover();
+    updateBulkBar();
+  }
+
+  function exitSelectionMode() {
+    selectionMode = false;
+    document.body.classList.remove('selection-mode');
+    selectModeButton.classList.remove('active');
+    selectModeButton.textContent = '選択';
+    clearSelection();
+    closeBulkPopovers();
+  }
+
+  function toggleSelectionMode() {
+    if (selectionMode) {
+      exitSelectionMode();
+    } else {
+      enterSelectionMode();
+    }
+  }
+
+  function setCardSelected(hash, selected) {
+    if (selected) {
+      selectedHashes.add(hash);
+    } else {
+      selectedHashes.delete(hash);
+    }
+    const card = grid.querySelector(`[data-hash="${hash}"]`);
+    if (card) {
+      card.classList.toggle('selected', selected);
+    }
+  }
+
+  function handleSelectClick(item, event) {
+    const index = items.indexOf(item);
+    if (event.shiftKey && lastSelectedIndex >= 0 && lastSelectedIndex < items.length) {
+      const from = Math.min(lastSelectedIndex, index);
+      const to = Math.max(lastSelectedIndex, index);
+      for (let i = from; i <= to; i++) {
+        setCardSelected(items[i].hash, true);
+      }
+    } else {
+      const willSelect = !selectedHashes.has(item.hash);
+      setCardSelected(item.hash, willSelect);
+      lastSelectedIndex = index;
+    }
+    updateBulkBar();
+  }
+
+  function clearSelection() {
+    for (const hash of selectedHashes) {
+      const card = grid.querySelector(`[data-hash="${hash}"]`);
+      if (card) {
+        card.classList.remove('selected');
+      }
+    }
+    selectedHashes.clear();
+    lastSelectedIndex = -1;
+    updateBulkBar();
+  }
+
+  function selectAllVisible() {
+    for (const item of items) {
+      setCardSelected(item.hash, true);
+    }
+    updateBulkBar();
+  }
+
+  function updateBulkBar() {
+    const count = selectedHashes.size;
+    bulkBar.hidden = !selectionMode || count === 0;
+    bulkCount.textContent = `${count}件選択中`;
+    if (count === 0) {
+      closeBulkPopovers();
+    }
+  }
+
+  function closeBulkPopovers() {
+    bulkAddPopover.hidden = true;
+    bulkRemovePopover.hidden = true;
+    hideBulkAddSuggest();
+  }
+
+  function removeItemFromGrid(hash) {
+    const idx = items.findIndex((it) => it.hash === hash);
+    if (idx === -1) {
+      return;
+    }
+    const card = grid.querySelector(`[data-hash="${hash}"]`);
+    if (card) {
+      card.remove();
+    }
+    items.splice(idx, 1);
+    offset = Math.max(0, offset - 1);
+    selectedHashes.delete(hash);
+    if (lastSelectedIndex >= idx) {
+      lastSelectedIndex -= 1;
+    }
+    emptyMessage.hidden = items.length > 0;
+  }
+
+  async function bulkTagRequest(action, tag, hashes) {
+    const response = await apiFetch('../api/gallery.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+      body: JSON.stringify({ action, tag, hashes }),
+    });
+
+    if (response.status === 401) {
+      showLogin();
+      return;
+    }
+
+    const data = await response.json();
+    if (!data.success) {
+      return;
+    }
+
+    applyBulkTagResult(action, data);
+  }
+
+  function applyBulkTagResult(action, data) {
+    const affectedTag = data.tag;
+
+    for (const entry of data.items) {
+      const item = items.find((it) => it.hash === entry.hash);
+      if (!item) {
+        continue;
+      }
+      item.tags = entry.tags;
+      const card = grid.querySelector(`[data-hash="${item.hash}"]`);
+      if (card) {
+        renderCardTags(card.querySelector('.card-tag-list'), item.tags);
+      }
+      if (action === 'add_tag') {
+        for (const tag of entry.tags) {
+          if (!allTags.includes(tag)) {
+            allTags.push(tag);
+          }
+        }
+      }
+    }
+
+    // 絞り込み中に、その絞り込みタグを外したアイテムは条件から外れるためグリッドから除去する。
+    if (action === 'remove_tag' && currentTagsFilter.includes(affectedTag)) {
+      for (const entry of data.items) {
+        removeItemFromGrid(entry.hash);
+      }
+    }
+
+    updateBulkBar();
+    if (!bulkRemovePopover.hidden) {
+      renderBulkRemoveList();
+    }
+  }
+
+  function openBulkAddPopover() {
+    if (selectedHashes.size === 0) {
+      return;
+    }
+    bulkRemovePopover.hidden = true;
+    bulkAddPopover.hidden = false;
+    bulkAddInput.value = '';
+    bulkAddInput.focus();
+  }
+
+  async function submitBulkAdd(event) {
+    event.preventDefault();
+    const tags = bulkAddInput.value.split(',').map((t) => t.trim()).filter(Boolean);
+    if (tags.length === 0) {
+      return;
+    }
+    const hashes = Array.from(selectedHashes);
+    for (const tag of tags) {
+      await bulkTagRequest('add_tag', tag, hashes);
+    }
+    bulkAddInput.value = '';
+    hideBulkAddSuggest();
+    bulkAddPopover.hidden = true;
+  }
+
+  function openBulkRemovePopover() {
+    if (selectedHashes.size === 0) {
+      return;
+    }
+    bulkAddPopover.hidden = true;
+    hideBulkAddSuggest();
+    renderBulkRemoveList();
+    bulkRemovePopover.hidden = false;
+  }
+
+  function renderBulkRemoveList() {
+    const union = new Set();
+    for (const hash of selectedHashes) {
+      const item = items.find((it) => it.hash === hash);
+      for (const tag of (item && item.tags) || []) {
+        union.add(tag);
+      }
+    }
+    const tags = Array.from(union).sort((a, b) => a.localeCompare(b, 'ja'));
+
+    bulkRemoveList.innerHTML = '';
+    bulkRemoveEmpty.hidden = tags.length > 0;
+
+    for (const tag of tags) {
+      const chip = document.createElement('span');
+      chip.className = 'tag-chip';
+
+      const label = document.createElement('span');
+      label.textContent = tag;
+      chip.appendChild(label);
+
+      const removeButton = document.createElement('button');
+      removeButton.type = 'button';
+      removeButton.textContent = '×';
+      removeButton.setAttribute('aria-label', `選択中のファイルからタグ「${tag}」を削除`);
+      removeButton.addEventListener('click', () => bulkTagRequest('remove_tag', tag, Array.from(selectedHashes)));
+      chip.appendChild(removeButton);
+
+      bulkRemoveList.appendChild(chip);
+    }
+  }
+
+  function renderBulkAddSuggest(tags) {
+    if (tags.length === 0) {
+      hideBulkAddSuggest();
+      return;
+    }
+    bulkAddSuggest.innerHTML = '';
+    for (const tag of tags) {
+      const el = document.createElement('div');
+      el.className = 'tag-suggest-item';
+      el.textContent = tag;
+      el.addEventListener('mousedown', (event) => {
+        event.preventDefault();
+        const parts = bulkAddInput.value.split(',');
+        parts[parts.length - 1] = ` ${tag}`;
+        bulkAddInput.value = `${parts.map((p) => p.trim()).filter(Boolean).join(', ')}, `;
+        hideBulkAddSuggest();
+        bulkAddInput.focus();
+      });
+      bulkAddSuggest.appendChild(el);
+    }
+    bulkAddSuggest.hidden = false;
+  }
+
+  function hideBulkAddSuggest() {
+    bulkAddSuggest.hidden = true;
+    bulkAddSuggest.innerHTML = '';
+  }
+
+  function openBulkDeleteConfirm() {
+    if (selectedHashes.size === 0) {
+      return;
+    }
+    deleteConfirmMode = 'bulk';
+    deleteConfirmText.textContent = `${selectedHashes.size}件を削除しますか？`;
+    if (typeof deleteConfirmDialog.showModal === 'function') {
+      deleteConfirmDialog.showModal();
+    }
+  }
+
+  async function bulkDeleteSelected() {
+    const hashes = Array.from(selectedHashes);
+    if (hashes.length === 0) {
+      return;
+    }
+
+    const response = await apiFetch('../api/gallery.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+      body: JSON.stringify({ action: 'delete', hashes }),
+    });
+
+    if (response.status === 401) {
+      showLogin();
+      return;
+    }
+
+    const data = await response.json();
+    if (!data.success) {
+      return;
+    }
+
+    for (const hash of data.deleted) {
+      removeItemFromGrid(hash);
+    }
+    closeBulkPopovers();
+    updateBulkBar();
+
+    if (items.length === 0) {
+      exitSelectionMode();
+    }
   }
 
   loginForm.addEventListener('submit', handleLoginSubmit);
@@ -622,7 +969,61 @@
   deleteConfirmCancel.addEventListener('click', closeDeleteConfirm);
   deleteConfirmOk.addEventListener('click', () => {
     closeDeleteConfirm();
-    deleteCurrentItem();
+    if (deleteConfirmMode === 'bulk') {
+      bulkDeleteSelected();
+    } else {
+      deleteCurrentItem();
+    }
+  });
+
+  selectModeButton.addEventListener('click', toggleSelectionMode);
+  bulkSelectAllButton.addEventListener('click', selectAllVisible);
+  bulkClearButton.addEventListener('click', clearSelection);
+  bulkDeleteButton.addEventListener('click', openBulkDeleteConfirm);
+  bulkAddTagButton.addEventListener('click', () => {
+    if (bulkAddPopover.hidden) {
+      openBulkAddPopover();
+    } else {
+      bulkAddPopover.hidden = true;
+      hideBulkAddSuggest();
+    }
+  });
+  bulkRemoveTagButton.addEventListener('click', () => {
+    if (bulkRemovePopover.hidden) {
+      openBulkRemovePopover();
+    } else {
+      bulkRemovePopover.hidden = true;
+    }
+  });
+  bulkAddForm.addEventListener('submit', submitBulkAdd);
+  bulkAddInput.addEventListener('input', () => {
+    const segment = getCurrentSearchSegment(bulkAddInput.value);
+    if (segment === '') {
+      hideBulkAddSuggest();
+      return;
+    }
+    const alreadyEntered = bulkAddInput.value
+      .split(',')
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean);
+    const matches = allTags.filter(
+      (tag) => tag.toLowerCase().includes(segment.toLowerCase()) && !alreadyEntered.includes(tag.toLowerCase())
+    );
+    renderBulkAddSuggest(matches.slice(0, 20));
+  });
+  bulkAddInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      hideBulkAddSuggest();
+    }
+  });
+  document.addEventListener('click', (event) => {
+    if (!bulkAddPopover.hidden && !event.target.closest('#bulk-add-popover, #bulk-add-tag')) {
+      bulkAddPopover.hidden = true;
+      hideBulkAddSuggest();
+    }
+    if (!bulkRemovePopover.hidden && !event.target.closest('#bulk-remove-popover, #bulk-remove-tag')) {
+      bulkRemovePopover.hidden = true;
+    }
   });
   deleteConfirmDialog.addEventListener('click', (event) => {
     // 背景（::backdrop相当）クリック時はキャンセル扱いとする
@@ -662,6 +1063,14 @@
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && !tagPopover.hidden) {
       closeTagPopover();
+      return;
+    }
+    if (event.key === 'Escape' && (!bulkAddPopover.hidden || !bulkRemovePopover.hidden)) {
+      closeBulkPopovers();
+      return;
+    }
+    if (event.key === 'Escape' && selectionMode && !deleteConfirmDialog.open && !viewerDialog.open) {
+      exitSelectionMode();
       return;
     }
     if (deleteConfirmDialog.open) {
